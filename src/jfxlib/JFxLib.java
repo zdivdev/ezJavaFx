@@ -1,3 +1,4 @@
+package com.zdiv.jfxlib;
 
 import java.awt.Desktop;
 import java.awt.Desktop.Action;
@@ -8,6 +9,8 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +47,11 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.control.ButtonBase;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -55,6 +60,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.Separator;
@@ -66,8 +72,11 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
@@ -124,7 +133,6 @@ public class JFxLib {
 		menubar = new FxMenuBar();	
 		toolbar = new FxToolBar();
 		statusbar = new FxStatusBar();
-		statusbar.setDefault();
 		FxVBox topbar = new FxVBox(0);
 		
 		FxBorderPane pane = new FxBorderPane();
@@ -157,7 +165,6 @@ public class JFxLib {
 	
 	void makeStatusbar() {
 		statusbar = new FxStatusBar();
-		statusbar.setDefault();
 	}
 	
 	public void makeBorderPane(int w, int h) {
@@ -181,6 +188,13 @@ public class JFxLib {
 		mainPane = pane;
 	}
 	
+	public void setTop(FxNode node) {
+		if( mainPane instanceof FxBorderPane ) {
+			FxBorderPane pane = (FxBorderPane) mainPane;
+			pane.setTop(node);
+		}
+	}
+	
 	public void setLeft(FxNode node) {
 		if( mainPane instanceof FxBorderPane ) {
 			FxBorderPane pane = (FxBorderPane) mainPane;
@@ -199,6 +213,13 @@ public class JFxLib {
 		if( mainPane instanceof FxBorderPane ) {
 			FxBorderPane pane = (FxBorderPane) mainPane;
 			pane.setRight(node);
+		}
+	}
+	
+	public void setBottom(FxNode node) {
+		if( mainPane instanceof FxBorderPane ) {
+			FxBorderPane pane = (FxBorderPane) mainPane;
+			pane.setBottom(node);
 		}
 	}
 	
@@ -573,43 +594,46 @@ public class JFxLib {
 	}
 	
 	public static class FxToolBar {
-		//List<ToolBar> toolBar;
-		FxVBox toolBar;
+		FxVBox vbox;
+		List<ToolBar> toolBar;
 		ToolBar currToolBar;
 		
 		public FxToolBar() {
-			//toolBar = new ArrayList<>();
-			toolBar = new FxVBox();
+			vbox = new FxVBox();
+			toolBar = new ArrayList<>();
 		}
 		
 		public int size() {
 			return toolBar.size();
 		}
 	
-		public VBox get() {
-			return toolBar.get();
+		public Node get() {
+			return vbox.get();
 		}
 		
-		public ToolBar getCurrent() {
+		public ToolBar getCurrToolbar() {
 			return currToolBar;
 		}
-		
+
 		public ToolBar get(int i) {
-			return (ToolBar)toolBar.get().getChildren().get(i);
+			return toolBar.get(i);
 		}
 		
 		public void addToolBar() {
 			currToolBar = new ToolBar();
 			toolBar.add(currToolBar);
+			VBox.setVgrow(currToolBar, Priority.NEVER);
+			//HBox.setHgrow(currToolBar, Priority.ALWAYS);
+			vbox.add(currToolBar);			
 		}
 		
 		public void addToolBarItem(Node item, boolean extend) {
 			if( item == null ) {
 				currToolBar.getItems().add(new Separator());
 			} else {
+				VBox.setVgrow(currToolBar, Priority.NEVER);
 				if( extend ) {
-					HBox.setHgrow(currToolBar, Priority.ALWAYS);
-					HBox.setHgrow(item, Priority.ALWAYS);
+					HBox.setHgrow(item, Priority.ALWAYS);	
 				}
 				currToolBar.getItems().add(item);
 			}
@@ -636,10 +660,9 @@ public class JFxLib {
 				currToolBar.getItems().add(new Separator());
 			} else {
 				if( extend ) {
-					HBox.setHgrow(((ToolBar)toolBar.getItem(index)), Priority.ALWAYS);
 					HBox.setHgrow(item, Priority.ALWAYS);
 				}	
-		        ((ToolBar)toolBar.getItem(index)).getItems().add(item);
+		        toolBar.get(index).getItems().add(item);
 			}
 		}
 		
@@ -659,42 +682,44 @@ public class JFxLib {
 	
 	public static class FxStatusBar {
 	
-		HBox hbox = new HBox(16);
+		HBox hbox;
 		Label defaultLabel;
 		
 		public FxStatusBar() {
-			hbox.setAlignment(Pos.CENTER_LEFT);
+			hbox = new HBox(16);
+			//hbox.setAlignment(Pos.CENTER_LEFT);
 			hbox.setPadding(new Insets(4, 4, 4, 4));
+			//HBox.setHgrow(hbox, Priority.ALWAYS);
 		}
 		
 		public HBox get() {
 			return hbox;
 		}
 	
-		public void addStatusBarItem(Node item, boolean extend, Runnable runnable) {
+		public void addStatusBarItem(Node item, boolean extend) {
 			if( extend ) {
-				HBox.setHgrow(hbox, Priority.ALWAYS);
 				HBox.setHgrow(item, Priority.ALWAYS);
-			}
-			if( item instanceof Button && runnable != null ) {
-		        ((Button) item).setOnAction(new EventHandler<ActionEvent>() {
-		            public void handle(ActionEvent t) {
-		            	runnable.run();
-		            }
-		        });
-			}			
+			}		
 			hbox.getChildren().add(item);
 		}
-		
+
+		public void addStatusBarItem(FxNode item, boolean extend) {
+			addStatusBarItem(item.get(), extend);
+		}
+
 		public void setDefault() {
 			defaultLabel = new Label();
-			addStatusBarItem( defaultLabel, true, null );
+			addStatusBarItem( defaultLabel, true);
 		}
 		
-		public void settText(String text) {
+		public void setText(String text) {
 			if( defaultLabel != null ) {
 				defaultLabel.setText(text);
 			}
+		}
+		
+		public void setFontSize( int size ) {
+			defaultLabel.setStyle("-fx-font: " + size + " arial;");
 		}
 	}
 	
@@ -807,12 +832,35 @@ public class JFxLib {
 		}
 	}
 
+	public static class FxLabel implements FxNode {
+		
+		Label ctrl;
+		
+		public FxLabel(String text, int fontSize) {
+			ctrl = new Label(text);
+			setFontSize(fontSize);
+		}
+		
+		public FxLabel(String text) {
+			ctrl = new Label(text);
+		}
+		
+		@Override
+		public Node get() {
+			return ctrl;
+		}
+		public void setFontSize(int size) {
+			ctrl.setStyle("-fx-font: " + size + " arial;");
+		}
+	}
+	
 	public static class FxButton implements FxNode {
 	
-		Button button;
+		ButtonBase ctrl;
+		int fontSize = 12;
 		
 		public FxButton(String text, String icon, String tooltip, boolean vert, Runnable runnable) {
-			button = new Button();
+			ctrl = new Button();
 			if( text != null ) {
 				setText(text);
 			}
@@ -834,6 +882,10 @@ public class JFxLib {
 			this( null, null, null, false, null);
 		}
 		
+		public FxButton(String text) {
+			this( text, null, null, false, null );
+		}
+		
 		public FxButton(String text, Runnable runnable) {
 			this( text, null, null, false, runnable );
 		}
@@ -847,32 +899,33 @@ public class JFxLib {
 		}
 
 		@Override
-		public Button get() {
-			return button;
+		public Node get() {
+			return ctrl;
 		}
 	
 		public void setBackground() {
-			button.setStyle("-fx-background-color: #D8BFD8;");
+			ctrl.setStyle("-fx-background-color: #D8BFD8;");
 		}
 	
-		public void setFontSize() {
-			
+		public void setFontSize(int size) {
+			fontSize = size;
+			ctrl.setStyle("-fx-font: " + fontSize + " arial;");
 		}
 		
 		public void setText(String text) {
-			button.setText(text);
+			ctrl.setText(text);
 		}
 	
 		public void setIcon(String icon) {
-			button.setGraphic(new ImageView(new Image(getClass().getResourceAsStream(icon))));
+			ctrl.setGraphic(new ImageView(new Image(getClass().getResourceAsStream(icon))));
 		}
 		
 		public void setTooltip(String tooltip) {
-			button.setTooltip(new Tooltip(tooltip));
+			ctrl.setTooltip(new Tooltip(tooltip));
 		}
 		
 		public void setHandler(Runnable runnable) {
-			button.setOnAction(new EventHandler<ActionEvent>() {
+			ctrl.setOnAction(new EventHandler<ActionEvent>() {
 				@Override public void handle(ActionEvent event) {
 					runnable.run();
 				}
@@ -880,23 +933,103 @@ public class JFxLib {
 		}
 		
 		public void setVertical() {
-			button.setContentDisplay(ContentDisplay.TOP);
+			ctrl.setContentDisplay(ContentDisplay.TOP);
 		}
 	}
 	
 
+	public static class FxToggleButton implements FxNode {
+	
+		ToggleButton ctrl;
+		int fontSize = 12;
+		
+		public FxToggleButton(String text, String icon, String tooltip, boolean vert, Runnable runnable) {
+			ctrl = new ToggleButton();
+			if( text != null ) {
+				setText(text);
+			}
+			if( icon != null ) {
+				setIcon(icon);
+			}
+			if( tooltip != null ) {
+				setTooltip(tooltip);
+			}
+			if( runnable != null ) {
+				setHandler(runnable);
+			}
+			if( vert ) {
+				setVertical();
+			}
+		}
+		
+		public FxToggleButton() {
+			this( null, null, null, false, null);
+		}
+		
+		public FxToggleButton(String text, Runnable runnable) {
+			this( text, null, null, false, runnable );
+		}
+	
+		public FxToggleButton(String text, String icon, Runnable runnable) {
+			this( text, icon, null, false, runnable );
+		}
+
+		public FxToggleButton(String text, String icon, String tooltip, Runnable runnable) {
+			this( text, icon, tooltip, false, runnable );
+		}
+
+		@Override
+		public Node get() {
+			return ctrl;
+		}
+	
+		public boolean getState() {
+			return ctrl.isSelected();
+		}
+		public void setBackground() {
+			ctrl.setStyle("-fx-background-color: #D8BFD8;");
+		}
+	
+		public void setFontSize(int size) {
+			fontSize = size;
+			ctrl.setStyle("-fx-font: " + fontSize + " arial;");
+		}
+		
+		public void setText(String text) {
+			ctrl.setText(text);
+		}
+	
+		public void setIcon(String icon) {
+			ctrl.setGraphic(new ImageView(new Image(getClass().getResourceAsStream(icon))));
+		}
+		
+		public void setTooltip(String tooltip) {
+			ctrl.setTooltip(new Tooltip(tooltip));
+		}
+		
+		public void setHandler(Runnable runnable) {
+			ctrl.setOnAction(new EventHandler<ActionEvent>() {
+				@Override public void handle(ActionEvent event) {
+					runnable.run();
+				}
+			}); 
+		}
+		
+		public void setVertical() {
+			ctrl.setContentDisplay(ContentDisplay.TOP);
+		}
+	}
+	
 	public static class FxChoiceBox implements FxNode {
 	
-		ChoiceBox<String> choice;
+		ChoiceBox<String> ctrl;
 		int fontSize = 12;
 
 		public FxChoiceBox(String[] items, Runnable runnable) {
-			choice = new ChoiceBox<>();
-			choice.setStyle("-fx-font: " + fontSize + " arial;");
+			ctrl = new ChoiceBox<>();
+			ctrl.setStyle("-fx-font: " + fontSize + " arial;");
 			if( items != null ) {
-				for( String i : items ) {
-					this.add(i);
-				}
+				ctrl.getItems().addAll(items);
 				selectFirst();
 			}
 			if( runnable != null ) {
@@ -906,36 +1039,36 @@ public class JFxLib {
 
 		@Override
 		public ChoiceBox<String> get() {
-			return choice;
+			return ctrl;
 		}
 	
 		public void setBackground() {
-			choice.setStyle("-fx-background-color: #D8BFD8;");
+			ctrl.setStyle("-fx-background-color: #D8BFD8;");
 		}
 	
 		public void setFontSize(int size) {
 			fontSize = size;
-			choice.setStyle("-fx-font-size: " + fontSize + ";");
+			ctrl.setStyle("-fx-font-size: " + fontSize + ";");
 		}
 		
 		public void add(String text) {
-			choice.getItems().add(text);
+			ctrl.getItems().add(text);
 		}
 	
 		public void selectFirst() {
-			choice.getSelectionModel().selectFirst();
+			ctrl.getSelectionModel().selectFirst();
 		}
 		
 		public String getSelectedItem() {
-			return choice.getSelectionModel().getSelectedItem();
+			return ctrl.getSelectionModel().getSelectedItem();
 		}
 		
 		public int getSelectedIndex() {
-			return choice.getSelectionModel().getSelectedIndex();
+			return ctrl.getSelectionModel().getSelectedIndex();
 		}
 		
 		public void setHandler(Runnable runnable) {
-			choice.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+			ctrl.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
 				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
 					runnable.run(); 
 				}
@@ -943,7 +1076,72 @@ public class JFxLib {
 		}
 	}
 	
-	public class FxImageView implements FxNode {
+
+	public static class FxComboBox implements FxNode {
+	
+		ComboBox<String> ctrl;
+		int fontSize = 12;
+
+		public FxComboBox(String[] items, Runnable runnable) {
+			ctrl = new ComboBox<>();
+			ctrl.setStyle("-fx-font: " + fontSize + " arial;");
+			if( items != null ) {
+				ctrl.getItems().addAll(items);
+				selectFirst();
+			}
+			if( runnable != null ) {
+				setHandler(runnable);
+			}
+		}
+
+		public FxComboBox(Runnable runnable) {
+			this(null, runnable);
+		}
+		
+		public FxComboBox() {
+			this(null, null);
+		}
+		
+		@Override
+		public ComboBox<String> get() {
+			return ctrl;
+		}
+	
+		public void setBackground() {
+			ctrl.setStyle("-fx-background-color: #D8BFD8;");
+		}
+	
+		public void setFontSize(int size) {
+			fontSize = size;
+			ctrl.setStyle("-fx-font-size: " + fontSize + ";");
+		}
+		
+		public void add(String text) {
+			ctrl.getItems().add(text);
+		}
+	
+		public void selectFirst() {
+			ctrl.getSelectionModel().selectFirst();
+		}
+		
+		public String getSelectedItem() {
+			return ctrl.getSelectionModel().getSelectedItem();
+		}
+		
+		public int getSelectedIndex() {
+			return ctrl.getSelectionModel().getSelectedIndex();
+		}
+		
+		public void setHandler(Runnable runnable) {
+			ctrl.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+					runnable.run(); 
+				}
+	        });
+		}
+	}
+	
+	public static class FxImageView implements FxNode {
 	
 		ImageView imageView;
 		String imageFile;
@@ -1013,123 +1211,101 @@ public class JFxLib {
 	
 	public static class FxListView implements FxNode {
 	
-		FxVBox vbox;
-		FxToolBar hbox;
-		ListView<String> list;
+		ListView<String> ctrl;
 		int fontSize = 11;
+
+		public FxListView(String[] items, Runnable runnable) {
+			ctrl = new ListView<>();
+			ctrl.setStyle("-fx-font: " + fontSize + " arial;");
+
+			if( items != null ) {
+				ctrl.getItems().addAll(items);
+				selectFirst();
+			}
+			if( runnable != null ) {
+				setHandler(runnable);
+			}
+		}
 	    
 		public FxListView() {
-			list = new ListView<>();
-			list.setStyle("-fx-font: " + fontSize + " arial;");
-			
-			FxDrop.setDropHandler(list, new FxRunnable() {
-				@SuppressWarnings("unchecked")
-				@Override public void run(Object... object) {
-					List<File> filelist = (List<File>) object[0];
-					for( File file : filelist ) {
-						list.getItems().add(file.getPath());
-					}
-				}
-			});
+			this(null,null);
 		}
-	
-		public FxListView(Runnable runnable) {
-			this();
-			if( runnable != null ) {
-				list.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
-					public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-						runnable.run(); 
-					}
-		        });
-			}
+
+		public FxListView(String[] items) {
+			this(items,null);
 		}
 		
-		public FxListView(boolean toolbar) {
-			this();
-			if( toolbar ) {
-				hbox = new FxToolBar();
-				hbox.addToolBar();
-				hbox.add(new FxButton("Clear", () -> clear() ));
-				hbox.add(new FxButton("Copy", () -> copy() ));
-				VBox.setVgrow(hbox.get(), Priority.NEVER);
-				VBox.setVgrow(list, Priority.ALWAYS);
-				vbox = new FxVBox();
-				vbox.add(hbox.get());
-				vbox.add(list);
-			}
+		public FxListView(Runnable runnable) {
+			this(null,runnable);
 		}
-	
+		
 		@Override
 		public Node get() {
-			if( vbox != null ) {
-				return vbox.get();
-			} else {
-				return list;
-			}
+			return ctrl;
+		}
+		
+		public void setHandler(Runnable runnable) {
+			ctrl.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+					runnable.run(); 
+				}
+	        });
 		}
 		
 		public void clear() {
-			list.getItems().clear();
-		}
-		
-		public void copy() {
-			FxClipboard.putString(String.join("\n", list.getItems()));
+			ctrl.getItems().clear();
 		}
 		
 		public void add(String data) {
-			list.getItems().add(data);
+			ctrl.getItems().add(data);
 		}
 		
 		public String get(int index) {
-			return list.getItems().get(index);
+			return ctrl.getItems().get(index);
 		}
 		
 		public String getText() {
-			return String.join("\n",  list.getItems());
+			return String.join("\n",  ctrl.getItems());
 		}
 		
 		public void fontDown() {
 			if( fontSize > 1 ) {
 				fontSize--;
-				list.setStyle("-fx-font-size: " + fontSize + ";");
+				ctrl.setStyle("-fx-font-size: " + fontSize + ";");
 			}
 		}
 	
 		public void fontUp() {
 			if( fontSize < 127 ) {
 				fontSize++;
-				list.setStyle("-fx-font-size: " + fontSize + ";");
+				ctrl.setStyle("-fx-font-size: " + fontSize + ";");
 			}		
 		}
 
       public void selectFirst() {
-			list.getSelectionModel().selectFirst();
+    	  ctrl.getSelectionModel().selectFirst();
 		}
 		
 		public String getSelectedItem() {
-			return list.getSelectionModel().getSelectedItem();
+			return ctrl.getSelectionModel().getSelectedItem();
 		}
 		
 		public int getSelectedIndex() {
-			return list.getSelectionModel().getSelectedIndex();
+			return ctrl.getSelectionModel().getSelectedIndex();
 		}
 		
 		public String getUserData() {
-			return (String)list.getUserData(); 
+			return (String)ctrl.getUserData(); 
 		}
-		
-		public void setSelectionHandler(Runnable runnable) {
-			list.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
-				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-					runnable.run(); 
-				}
-	        });
-		}
-				
 	}
-
 	
-	public static class FxFileListView {
+	public static class FxFileListView implements FxNode {
+		
+		/*
+		FxVBox vbox;
+		FxToolBar hbox;
+		*/
+		ListView<String> ctrl;
 		
 	    private static class FileListCell extends ListCell<String> {
 	        @Override public void updateItem(String item, boolean empty) {
@@ -1141,9 +1317,9 @@ public class JFxLib {
 	            	File file = new File(item);
 	            	Image fxImage;
 	            	if( file.exists() && file.isDirectory() ) {
-	            		fxImage = new Image(getClass().getResourceAsStream("/res/16/folder.png"));
+	            		fxImage = new Image(getClass().getResourceAsStream("/res/folder.png"));
 	            	} else {
-	            		fxImage = new Image(getClass().getResourceAsStream("/res/16/file.png"));
+	            		fxImage = new Image(getClass().getResourceAsStream("/res/file.png"));
 	            	}
 	                setGraphic(new ImageView(fxImage));
 	                setText(file.getName());
@@ -1154,74 +1330,229 @@ public class JFxLib {
 	        }
 	    }
 	    
-		ListView<String> listView;
-		
-		public FxFileListView() {
-			this(null);
-		}
-		
-		public FxFileListView(Runnable runnable) {
-			listView = new ListView<>();
-			listView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		public FxFileListView(String folder, Runnable runnable) {
+			ctrl = new ListView<>();
+			ctrl.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
 	            @Override public ListCell<String> call(ListView<String> list) {
 	                return new FileListCell();
 	            }
 	        });
-			if( runnable != null ) {
-				listView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
-					public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-						runnable.run(); 
-					}
-		        });
+			if( folder != null ) {
+				File dir = new File(folder);
+				if( dir.exists() && dir.isDirectory() ) {
+					loadDirectory(dir);
+				}
 			}
-			FxDrop.setDropHandler(listView, new FxRunnable() {
+			if( runnable != null ) {
+				setHandler(runnable);
+			}
+			FxDrop.setDropHandler(ctrl, new FxRunnable() {
 				@SuppressWarnings("unchecked")
 				@Override public void run(Object... object) {
 					List<File> list = (List<File>) object[0];
 					for( File file : list ) {
-						listView.getItems().add(file.getPath());
+						ctrl.getItems().add(file.getPath());
 					}
 				}
 			});
 		}
 		
-		public ListView<String> getListView() {
-			return listView;
+		public FxFileListView() {
+			this(null,null);
 		}
 		
-		public void setSelectionHandler(Runnable runnable) {
-			listView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+		/*
+		public FxFileListView(boolean toolbar) {
+			this();
+			if( toolbar ) {
+				hbox = new FxToolBar();
+				hbox.addToolBar();
+				hbox.add(new FxButton("Clear", () -> clear() ));
+				hbox.add(new FxButton("Copy", () -> copy() ));
+				VBox.setVgrow(hbox.get(), Priority.NEVER);
+				VBox.setVgrow(ctrl, Priority.ALWAYS);
+				vbox = new FxVBox();
+				vbox.add(hbox.get());
+				vbox.add(ctrl);
+			}
+		}
+		*/
+		
+		public ListView<String> getListView() {
+			return ctrl;
+		}
+
+		@Override
+		public Node get() {
+			//return vbox.get();
+			return ctrl;
+		}
+		
+		public void setHandler(Runnable runnable) {
+			ctrl.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
 				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-					runnable.run(); 
+					File file = new File(getSelectedItem());
+					if( file.isDirectory() ) {
+						loadDirectory(file.getAbsoluteFile());
+					} else {
+						runnable.run(); 
+					}
 				}
 	        });
 		}
 		
+		public void loadDirectory(File dir) {
+			if( dir.exists() && dir.isDirectory() ) {
+				ctrl.getSelectionModel().clearSelection();
+				ctrl.getItems().clear();
+				if( dir.getParentFile().exists() ) {
+					ctrl.getItems().add( dir.getPath() + "/.." );
+				}
+				Collections.sort(Arrays.asList(dir.listFiles()));
+				for( File file : dir.listFiles() ) {
+					if( file.isDirectory() ) {
+						ctrl.getItems().add(file.getPath());
+					}
+				}
+				for( File file : dir.listFiles() ) {
+					if( ! file.isDirectory() ) {
+						ctrl.getItems().add(file.getPath());
+					}
+				}
+				ctrl.scrollTo(0);
+			}
+		}
+		
+		public void loadDirectory(String folder) {
+			loadDirectory(folder);
+		}
+		
 		public String getSelectedItem() {
-			return listView.getSelectionModel().getSelectedItem();
+			return ctrl.getSelectionModel().getSelectedItem();
 		}
 		
 		public int getSelectedIndex() {
-			return listView.getSelectionModel().getSelectedIndex();
+			return ctrl.getSelectionModel().getSelectedIndex();
 		}
 		
 		public String getUserData() {
-			return (String)listView.getUserData(); 
+			return (String)ctrl.getUserData(); 
 		}
 		
 		public void clear() {
-			listView.getItems().clear();
+			ctrl.getItems().clear();
 		}
 		
+		public void copy() {
+			FxClipboard.putString(String.join("\n", ctrl.getItems()));
+		}
+				
 		public void add(String text) {
-			listView.getItems().add(text);
+			ctrl.getItems().add(text);
 		}
 		
 		public void add(String text, String icon) {
-			listView.getItems().add(text);
+			ctrl.getItems().add(text);
 		}
+
 	}
 	
+
+	public static class FxFileTreeView implements FxNode {
+
+		TreeView<String> ctrl;
+		int fontSize = 12;
+
+		public FxFileTreeView(String folder, Runnable runnable) {
+			ctrl = new TreeView<>();
+			ctrl.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeItem<String>>() {
+	            @Override
+	            public void changed(ObservableValue<? extends TreeItem<String>> observable, TreeItem<String> oldValue, TreeItem<String> newValue) {
+	            	runnable.run();
+	            }
+	        }); 
+	    	Image icon = new Image(getClass().getResourceAsStream("/res/16/folder.png"));
+	    	TreeItem<String> root = new TreeItem<> (new File(folder).getName(), new ImageView(icon));
+	    	addToTreeView(root, folder, fontSize, runnable);
+	    	ctrl.setRoot(root);
+	    }
+		
+		@Override
+		public Node get() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		
+		public void setFontSize( int size ) {
+			ctrl.setStyle("-fx-font-size: " + size + " pt;");
+		}
+
+	    public TreeItem<String> getTreeRootItem() {
+	    	return ctrl.getRoot();
+	    }
+	    
+	    public void setShowRoot(boolean show) {
+	    	ctrl.setShowRoot(show);
+	    }
+	    
+	    public String getSelectedTreePath() {
+	    	TreeItem<String> item = ctrl.getSelectionModel().getSelectedItem();
+	    	StringBuilder sb = new StringBuilder();
+	    	sb.insert( 0, item.getValue() );
+	    	item = item.getParent();
+	    	while( item != null ) {
+	    		sb.insert(0,  "/");
+	    		sb.insert(0, item.getValue());
+	    		item = item.getParent();
+	    	}
+	    	return sb.toString();
+	    }
+	    
+	    private void addToTreeView(TreeItem<String> node, String folder, int fontSize, Runnable runnable) {
+	    	File dir = new File(folder);
+	    	File[] files = dir.listFiles();
+	    	for( File file : files ) {
+	    		if( file.isDirectory() ) {
+	    			Image icon = new Image(getClass().getResourceAsStream("/res/16/folder.png"));
+	    			TreeItem<String> item = new TreeItem<> ( file.getName(), new ImageView(icon));
+	    			//item.setExpanded(true);
+	    			node.getChildren().add(item);
+	    			addToTreeView( item, file.getPath(), fontSize, runnable );
+	    		} else {
+	    			Image icon = new Image(getClass().getResourceAsStream("/res/16/file.png"));
+	    			TreeItem<String> item = new TreeItem<> ( file.getName(), new ImageView(icon));
+	    			node.getChildren().add(item);
+	    		}
+	    	}
+	    }
+	}
+	
+	public static class FxProgressBar implements FxNode {
+
+		ProgressBar ctrl;
+		
+		public FxProgressBar() {
+			ctrl = new ProgressBar();
+		}
+		
+		public FxProgressBar(double value) {
+			ctrl = new ProgressBar();
+			ctrl.setProgress(value);
+		}
+		
+		@Override
+		public Node get() {
+			return ctrl;
+		}
+	
+		public double getValue() {
+			return ctrl.getProgress();
+		}
+		
+		public void setValue(double value) {
+			ctrl.setProgress(value);
+		}
+	}
 
 	public static class FxTextArea implements FxNode {
 	
@@ -1659,6 +1990,10 @@ public class JFxLib {
 		toolbar.addToolBarItem(item,false);
 	}
 
+	public void addToolBarItem(FxNode item, boolean extend) {
+		toolbar.addToolBarItem(item,extend);
+	}
+
 	public void addToolBarItem(Node item, boolean extend) {
 		toolbar.addToolBarItem(item,extend);
 	}
@@ -1667,8 +2002,32 @@ public class JFxLib {
 		toolbar.addSeparator();
 	}
 	
+	public void addDefaultStatusText() {
+		statusbar.setDefault();
+	}
+	
+	public void addStatusBarItem(FxNode item) {
+		statusbar.addStatusBarItem(item,false);
+	}
+	
+	public void addStatusBarItem(Node item) {
+		statusbar.addStatusBarItem(item,false);
+	}
+
+	public void addStatusBarItem(FxNode item, boolean extend) {
+		statusbar.addStatusBarItem(item,extend);
+	}
+
+	public void addStatusBarItem(Node item, boolean extend) {
+		statusbar.addStatusBarItem(item,extend);
+	}
+
 	public void setStatusBarText(String text) {
-		statusbar.settText(text);
+		statusbar.setText(text);
+	}
+
+	public void setStatusBarTextSize(int size) {
+		
 	}
 	
 	//////////////////////////////////////////////////////////////////////
@@ -1691,12 +2050,24 @@ public class JFxLib {
 		this.setTitle(this.mainStage, title);
 	}
 
+	public Image getImage(String imageName, Class<?> cls) {
+		if( cls != null ) {
+			return new Image(cls.getResourceAsStream(imageName));
+		} else {
+			return new Image(getClass().getResourceAsStream(imageName));
+		}
+	}
+
+	public Image getImage(String imageName) {
+		return getImage(imageName,null);
+	}
+
 	public void setIcon(Stage stage, String icon) { // /res/icon.png
-		stage.getIcons().add(new Image(getClass().getResourceAsStream(icon)));
+		stage.getIcons().add(getImage(icon));
 	}
 
 	public void setIcon(Stage stage, Class<?> cls, String icon) { // icon.png
-		stage.getIcons().add(new Image(cls.getResourceAsStream(icon)));
+		stage.getIcons().add(getImage(icon, cls));
 	}
 
 	public void setIcon(String icon) {
@@ -2126,6 +2497,10 @@ public class JFxLib {
     
     public void showToast(String toastMsg) {
     	showToast(mainStage, toastMsg, 3500, 500, 500);
+    }
+    
+    public void showToast(String toastMsg, int toastDelay) {
+    	showToast(mainStage, toastMsg, toastDelay, 500, 500);
     }
     
     /*
