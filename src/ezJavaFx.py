@@ -141,7 +141,23 @@ class FxHSplitPane(FxSplitPane):
             self.ctrl.setDividerPositions(h['first'], 1-h['first']);
         self.ctrl.setOrientation(Orientation.HORIZONTAL);
         self.addItems(h)
-        
+
+class FxTabPane():
+    def __init__(self,h):
+        from javafx.scene.control import TabPane
+        self.ctrl = TabPane()
+        labels = h.get('labels')
+        items = h.get('items')
+        if labels and items:
+            for i in range(0,len(items)):
+                self.addItem( labels[i], Layout(items[i]).ctrl)        
+    def addItem(self, title, item):
+        from javafx.scene.control import Tab
+        tab = Tab()
+        tab.setText(title)
+        tab.setContent(item)
+        self.ctrl.getTabs().add(tab)
+              
 #
 # Control
 #
@@ -213,10 +229,9 @@ def SetFileDropHandler(ctrl,handler):
     ctrl.setOnDragDropped( DragDropped(handler) )
     
 def Layout(content):
-    print('Layout')
-    vbox = FxVBox(5,5)
+    vbox = FxVBox(1,1)
     for v in content:
-        hbox = FxHBox(5,5)
+        hbox = FxHBox(1,1)
         expand = False
         for h in v:
             name = h.get('name')
@@ -225,10 +240,11 @@ def Layout(content):
                 continue
             if   name == 'Label':     f = FxLabel(h)
             elif name == 'Button':    f = FxButton(h)
-            elif name == 'TextField': f = FxTextField(h);
-            elif name == 'TextArea':  f = FxTextArea(h);
-            elif name == 'HSplit':    f = FxHSplitPane(h);
-            elif name == 'VSplit':    f = FxVSplitPane(h);
+            elif name == 'TextField': f = FxTextField(h)
+            elif name == 'TextArea':  f = FxTextArea(h)
+            elif name == 'HSplit':    f = FxHSplitPane(h)
+            elif name == 'VSplit':    f = FxVSplitPane(h)
+            elif name == 'TabPane':   f = FxTabPane(h)
             else: continue
             
             width = -1
@@ -273,6 +289,14 @@ class Window(Application):
       
 class FxApp(Window):
     def __init__(self):
+        tab1 = [[ { "name" : "TextArea", "expand" : True },
+                  { "expand" : True }, ]]
+        tab2 = [[ { "name" : "TextArea", "expand" : True },
+                  { "expand" : True }, ]]   
+        split1 = [[ { "name" : "TextArea", "expand" : True },
+                    { "expand" : True }, ]]
+        split2 = [[ { "name" : "TextArea", "expand" : True },
+                    { "expand" : True }, ]]   
         self.content = [ # vbox
             [ # hbox
                 { "name" : "Label", "label" : "Address:" },
@@ -285,22 +309,11 @@ class FxApp(Window):
                 { "expand" : True },
             ],
             [ # hbox
-                { "name" : "HSplit", "first" : 0.5, "expand" : True,
-                   "items" : [
-                        [ #vbox
-                            [ #hbox
-                                { "name" : "TextArea", "expand" : True },
-                                { "expand" : True },                        
-                            ],
-                        ],
-                        [ #vbox
-                            [ #hbox
-                                { "name" : "TextArea", "expand" : True },
-                                { "expand" : True },                        
-                            ],
-                        ],
-                    ]
-                },
+                { "name" : "TabPane", "labels" : [ "Tab1", "Tab2" ], "items" : [ tab2, tab2 ], "expand" : True },
+                { "expand" : True },
+            ],  
+            [ # hbox
+                { "name" : "HSplit", "items" : [ split1, split2 ] , "first" : 0.5, "expand" : True},
                 { "expand" : True },
             ],                
         ]
