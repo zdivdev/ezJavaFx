@@ -1,3 +1,4 @@
+
 from javafx.application import Application
 from javafx.scene import Scene
 from javafx.scene import Node
@@ -116,13 +117,31 @@ class FxHBox(FxBox):
         self.ctrl.setSpacing( gap )
         self.ctrl.setPadding( Insets( pad, pad, pad, pad ) )
 
+
+class FxBorderPane():
+    def __init__(self,w):
+        from javafx.scene.layout import BorderPane
+        from javafx.geometry import Insets
+        self.ctrl = BorderPane()
+        self.ctrl.setPadding(Insets(0, 0, 0, 0))
+        if w.content: self.setCenter(FxLayout(w.content))
+        v = FxVBox()
+        if w.menu: v.addItem(FxMenuBar(w.menu))
+        if w.tool: v.addItem(FxToolBar(w.tool))
+        self.setTop(v.ctrl)
+    def setTop(self,item):    self.ctrl.setTop(item)
+    def setBottom(self,item): self.ctrl.setBottom(item)
+    def setLeft(self,item):   self.ctrl.setLeft(item)
+    def setRight(self,item):  self.ctrl.setRight(item)
+    def setCenter(self,item): self.ctrl.setCenter(item)
+ 
 class FxSplitPane(object):
-    def addItem(self,item): self.ctrl.getItems().add(item);
+    def addItem(self,item): self.ctrl.getItems().add(item)
     def addItems(self,layout):
         items = layout.get('items')
         if items:
             for item in items:
-                self.addItem(Layout(item).ctrl)
+                self.addItem(FxLayout(item))
         
 class FxVSplitPane(FxSplitPane):
     def __init__(self,h):
@@ -150,7 +169,7 @@ class FxTabPane():
         items = h.get('items')
         if labels and items:
             for i in range(0,len(items)):
-                self.addItem( labels[i], Layout(items[i]).ctrl)        
+                self.addItem( labels[i], FxLayout(items[i]))        
     def addItem(self, title, item):
         from javafx.scene.control import Tab
         tab = Tab()
@@ -172,10 +191,11 @@ class FxLabel():
 class FxButton():
     def __init__(self,h):
         from javafx.scene.control import Button
+        from javafx.scene.control import Tooltip
         self.ctrl = Button()
         self.ctrl.setText(h.get('label'))
-        if h.get('handler'):
-            self.ctrl.setOnAction( h['handler'] )
+        if h.get('tooltip'): self.ctrl.setTooltip(Tooltip(h['tooltip']))
+        if h.get('handler'): self.ctrl.setOnAction( h['handler'] )
 
 class FxText():
     def getText(self): return self.ctrl.getText()
@@ -227,8 +247,69 @@ def DragDropped(handler):
 def SetFileDropHandler(ctrl,handler):  
     ctrl.setOnDragOver( DragOver )
     ctrl.setOnDragDropped( DragDropped(handler) )
+
+def FxMenu(name,menu_table):
+    from javafx.scene.control import Menu
+    from javafx.scene.control import MenuBar
+    from javafx.scene.control import MenuItem
+    from javafx.scene.control import SeparatorMenuItem
+    menu = Menu(name)
+    for m in menu_table:
+        if not m.get('name'): continue # Separater
+        if not m.get('item'): continue # Disabled
+        if type(m['item']) == list:
+            menu.getItems().add(FxMenu(m['name'],m['item']))
+        else:
+            item = MenuItem(m['name'])
+            item.setOnAction(m['item'])
+            menu.getItems().add(item);
+    return menu
+
+def FxMenuBar(menubar_table):
+    from javafx.scene.control import Menu
+    from javafx.scene.control import MenuBar
+    from javafx.scene.control import MenuItem
+    from javafx.scene.control import SeparatorMenuItem
+    menubar = MenuBar()
+  
+    for m in menubar_table:
+        if m.get('name'):
+            menubar.getMenus().add(FxMenu(m['name'],m['item']))
+        else:
+            if m.get('fontsize'):
+                menubar.setStyle("-fx-font: " + m['fontsize'] + " arial;")  
+    return menubar
+
+def FxToolBar(toolbar_table):
+    from javafx.scene.control import Separator;
+    from javafx.scene.control import ToolBar;
+    toolbar = ToolBar();
+    for m in toolbar_table:
+        if not m.get('name'): continue # Separater
+        if not m.get('handler'): continue # Disabled
+        item = FxButton(m)
+        toolbar.getItems().add(item.ctrl);
+    return toolbar
+
+'''
+    public void addToolBarItem(Node item, boolean extend) {
+        if( item == null ) {
+            currToolBar.getItems().add(new Separator());
+        } else {
+            VBox.setVgrow(currToolBar, Priority.NEVER);
+            if( extend ) {
+                HBox.setHgrow(item, Priority.ALWAYS);   
+            }
+            currToolBar.getItems().add(item);
+        }
+    }   
     
-def Layout(content):
+    public void addSeparator() {
+        currToolBar.getItems().add(new Separator());
+    }
+'''
+
+def FxLayout(content):
     vbox = FxVBox(1,1)
     for v in content:
         hbox = FxHBox(1,1)
@@ -262,26 +343,32 @@ def Layout(content):
                 __ctrl_table[h['key']] = f
             hbox.addItem(f.ctrl,expand=h.get('expand'))
         vbox.addItem(hbox.ctrl,expand=expand)
-    return vbox
+    return vbox.ctrl
 
 def getCtrl(name):
     return __ctrl_table.get(name)
     
 class Window(Application):
     def start(self, stage):
+        from javafx.application import Platform
         self.ctrl  = __ctrl_table
         self.stage = stage
         self.stage.setTitle("FxApp Example")
-        v = Layout(self.content)
-        self.scene = Scene(v.ctrl, 640, 400)
+        if self.closeHandler: self.stage.setOnCloseRequest(self.closeHandler)
+        Platform.setImplicitExit(True)
+        pane = FxBorderPane(self)
+        self.scene = Scene(pane.ctrl, 640, 400)
         self.stage.setScene(self.scene)
         self.stage.show()
+    def SetCloseHandler(self,handler): self.closeHandler = handler
+    def Close(self): self.stage.close()
     def SetContent(self,content): self.content = content
     def Alert(self, title, message): Alert(title,message,self.stage)
     def YesNo(title, message, stage=None): return YesNo(title,message,self.stage)
     def FileOpenDialog(self, initialFile): return FileOpenDialog(initialFile, self.stage)
     def FileSaveDialog(self, initialFile): return FileSaveDialog(initialFile, self.stage)
-        
+    
+    
 #
 # Application
 #
@@ -289,6 +376,17 @@ class Window(Application):
       
 class FxApp(Window):
     def __init__(self):
+        self.menu = [
+            { 'name' : "File",
+              'item' : [
+                    { 'name' : "Exit" , 'item' : self.onExit, 'icon' : 'exit' } ]
+            }, { 'name' : "Help",
+              'item' : [
+                    { 'name' : "About", 'item' : self.onAbout, 'icon' : 'help' } ]
+            }]
+        self.tool = [
+                { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit"  },
+            ]
         tab1 = [[ { "name" : "TextArea", "expand" : True },
                   { "expand" : True }, ]]
         tab2 = [[ { "name" : "TextArea", "expand" : True },
@@ -317,17 +415,24 @@ class FxApp(Window):
                 { "expand" : True },
             ],                
         ]
-
+        self.SetCloseHandler(self.onClose)
     def onAbout(self,event):
         v = YesNo("Global", "Dialog")
         if v: self.Alert("Result", "Yes")
         else: self.Alert("Result", "No")
-
     def onBrowse(self,event):
         f = FileOpenDialog(None)
         ctrl = getCtrl('text')
         if ctrl:                
             ctrl.setText(f.getPath())
- 
+    def onExit(self,event):
+        from javafx.application import Platform
+        Platform.exit()
+        #from java.lang import System
+        #ASystem.exit(0)
+        #self.Close()
+    def onClose(self,event):
+        v = YesNo("Alert", "Do you want to quit ?", self.stage)
+            
 if __name__ == '__main__':
     Application.launch(FxApp().class, [])
