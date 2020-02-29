@@ -310,6 +310,31 @@ class EzListView(EzControl):
     def GetSelectedIndex(self):
         return self.ctrl.getSelectionModel().getSelectedIndex()
 
+class EzTreeView(EzControl):
+    def __init__(self,h):
+        from javafx.scene.control import TreeView
+        from javafx.scene.control import TreeItem
+        self.root = TreeItem(h['name'])
+        self.ctrl = TreeView(self.root)
+        self.Initialize(h)
+        if h.get('handler'): self.ctrl.getSelectionModel().selectedItemProperty().addListener(h['handler'])
+        item = TreeItem("Message11")       
+        self.root.getChildren().add(item)
+    def GetSelectedIndex(self):
+        return self.ctrl.getSelectionModel().getSelectedIndex()
+    def GetSelectedItem(self):
+        return self.ctrl.getSelectionModel().getSelectedItem()
+        #.getParent().getChildren().indexOf(selectedItem);
+    def GetSelectedItemText(self):
+        return self.ctrl.getSelectionModel().getSelectedItem().getValue()
+    def GetSelectedItemPath(self,delim=""):
+        item = self.ctrl.getSelectionModel().getSelectedItem()
+        path = item.getValue()
+        while item.getParent():
+            item = item.getParent()
+            path = item.getValue() + delim + path
+        return path
+
 class EzText(EzControl):
     def GetText(self): return self.ctrl.getText()
     def SetText(self,text): self.ctrl.setText(text)
@@ -471,14 +496,15 @@ def EzLayout(content):
                 continue
             if   name == 'Label': f = EzLabel(h)
             elif name == 'Button': f = EzButton(h)
+            elif name == 'ToggleButton': f = EzToggleButton(h)
             elif name == 'CheckBox': f = EzCheckBox(h)
             elif name == 'ChoiceBox': f = EzChoiceBox(h)
             elif name == 'ComboBox': f = EzComboBox(h)
             elif name == 'ListBox': f = EzListView(h)
+            elif name == 'TreeView': f = EzTreeView(h)
             elif name == 'ProgressBar': f = EzProgressBar(h)
             elif name == 'TextField': f = EzTextField(h)
             elif name == 'TextArea': f = EzTextArea(h)
-            elif name == 'ToggleButton': f = EzToggleButton(h)
             elif name == 'TabPane': f = EzTabPane(h)
             elif name == 'HSplit': f = EzHSplitPane(h)
             elif name == 'VSplit': f = EzVSplitPane(h)
@@ -580,7 +606,7 @@ class FxApp(EzWindow):
                 { "name" : "ProgressBar", 'key' : 'progress' },
                 { "name" : "<>"},
             ]
-        tab1 = [[ { "name" : "TextArea", "expand" : True },
+        tab1 = [[ { "name" : "TreeView", "key" : "treeview", 'handler' : self.onTreeView,"expand" : True },
                   { "expand" : True }, ]]
         tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : self.onListBox, 'items' : ["apple","orange"], 'expand' : True },
                   { "expand" : True }, ]]
@@ -632,6 +658,11 @@ class FxApp(EzWindow):
         c = GetControl('listbox')
         t = GetControl('texttool')
         if c and t: t.SetText( c.GetSelectedItem() )
+    def onTreeView(self,newvalue):
+        c = GetControl('treeview')
+        t = GetControl('texttool')
+        print(c.GetSelectedItem())
+        if c and t: t.SetText( c.GetSelectedItemPath("-") )
     def onToggle(self,newvalue):
         print("toggle")
     def onCheck(self,newvalue):
