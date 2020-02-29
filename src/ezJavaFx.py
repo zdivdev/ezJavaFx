@@ -1,13 +1,16 @@
-
 from javafx.application import Application
 from javafx.scene import Scene
 from javafx.scene import Node
 from javafx.scene.layout import VBox
 from javafx.scene.layout import HBox
 from javafx.scene.layout import Priority
+from javafx.scene.input import Clipboard
+from javafx.scene.input import ClipboardContent 
+from javafx.geometry import Insets
 from javafx.geometry import Insets
 from javafx.geometry import Orientation
 from javafx.geometry import Pos
+from javafx.embed.swing import SwingFXUtils
 
 #
 # Control Table
@@ -134,6 +137,7 @@ class EzBorderPane():
         for m in w.tool:
             v.addItem(EzToolBar(m))
         self.setTop(v.ctrl)
+        self.setBottom(EzStatusBar(w.status))
     def setTop(self,item):    self.ctrl.setTop(item)
     def setBottom(self,item): self.ctrl.setBottom(item)
     def setLeft(self,item):   self.ctrl.setLeft(item)
@@ -200,7 +204,7 @@ class EzControl():
         if h.get('menu'): self.ctrl.setContextMenu(EzContextMenu(h['menu']))
         if h.get('key'): __ctrl_table[h['key']] = self
         if h.get('fontsize'): self.SetFontSize(h['fontsize'])                
-        if h.get('icon'): self.SetIcon( h['icon'] )
+        if h.get('icon'): self.SetIcon( h['icon'], h.get('icon_top') )
             
     def SetBackground(self,color): # {D8BFD8}
         self.ctrl.setStyle("-fx-background-color: #" + color + ";")
@@ -375,7 +379,7 @@ def DragDropped(handler):
 def SetFileDropHandler(ctrl,handler):  
     ctrl.setOnDragOver( DragOver )
     ctrl.setOnDragDropped( DragDropped(handler) )
-
+ 
 def EzMenu(name,menu_table):
     from javafx.scene.control import Menu
     from javafx.scene.control import ContextMenu
@@ -412,10 +416,10 @@ def EzMenuBar(menubar_table):
 def EzToolBar(toolbar_table):
     from javafx.scene.control import Separator
     from javafx.scene.control import ToolBar      
-    toolbar = ToolBar();
+    ctrl = ToolBar();
     for h in toolbar_table:
         if not h.get('name') or h['name'] == '-':
-            toolbar.getItems().add(Separator())
+            ctrl.getItems().add(Separator())
             continue
         name = h['name'] 
         if   name == 'Label': f = EzLabel(h)
@@ -427,16 +431,19 @@ def EzToolBar(toolbar_table):
         elif name == 'ToggleButton': f = EzToggleButton(h)
         elif name == 'TextField': f = EzTextField(h)
         else: continue  
-        #if h.get('key'): __ctrl_table[h['key']] = f        
-        toolbar.getItems().add(f.ctrl);
-    return toolbar
+        ctrl.getItems().add(f.ctrl);
+    return ctrl
 
 def EzStatusBar(statusbar_table):
     from javafx.scene.control import Separator     
-    toolbar = ToolBar();
+    from javafx.scene.layout import Region     
+    hbox = EzHBox(1,1);
     for h in statusbar_table:
-        if not h.get('name') or h['name'] == '-':
-            toolbar.getItems().add(Separator())
+        if not h.get('name'): continue
+        if h['name'] == '--' or h['name'] == '--': hbox.addItem(Separator()); continue
+        if h['name'] == '<>':
+            space = Region(); HBox.setHgrow(space, Priority.ALWAYS)
+            hbox.addItem(space)
             continue
         name = h['name'] 
         if   name == 'Label': f = EzLabel(h)
@@ -448,10 +455,8 @@ def EzStatusBar(statusbar_table):
         elif name == 'ToggleButton': f = EzToggleButton(h)
         elif name == 'TextField': f = EzTextField(h)
         else: continue  
-        #if h.get('key'): __ctrl_table[h['key']] = f        
-        toolbar.getItems().add(f.ctrl);
-    return toolbar
-
+        hbox.addItem(f.ctrl);
+    return hbox.ctrl
 
 def EzLayout(content):
     from javafx.scene.control import Tooltip
@@ -485,6 +490,38 @@ def EzLayout(content):
 def GetControl(name):
     return __ctrl_table.get(name)
 
+def ClipboardClear():
+    Clipboard.getSystemClipboard().clear();
+def GetClipboardText():
+    if Clipboard.getSystemClipboard().hasString():
+        return Clipboard.getSystemClipboard().getString()
+def GetClipboardHtmlText():
+    if Clipboard.getSystemClipboard().hasHtml():
+        return Clipboard.getSystemClipboard().getHtml()
+def GetClipboardFiles():
+    if Clipboard.getSystemClipboard().hasFiles():
+        return Clipboard.getSystemClipboard().getFiles()
+def GetClipboardImage():
+    return SwingFXUtils.fromFXImage( Clipboard.getSystemClipboard().getImage()  )
+
+def putClipboardText(text):
+    content = ClipboardContent()
+    content.putString(text);
+    Clipboard.getSystemClipboard().setContent(content)
+def putClipboardHtmlText(text):
+    content = ClipboardContent()
+    content.putString(text)
+    content.putHtml(text)
+    Clipboard.getSystemClipboard().setContent(content)
+def putClipboardFiles(files):
+    content = ClipboardContent()
+    content.putFiles(files)
+    Clipboard.getSystemClipboard().setContent(content)
+def putClipboardImage(image):
+    content = ClipboardContent()
+    content.putImage(SwingFXUtils.toFXImage(image, null))
+    Clipboard.getSystemClipboard().setContent(content)
+
 class EzWindow(Application):
     def start(self, stage):
         from javafx.application import Platform
@@ -498,7 +535,6 @@ class EzWindow(Application):
         self.stage.setScene(self.scene)
         if self.createdHandler: self.createdHandler()
         self.stage.show()
-
     def SetCloseHandler(self,handler): self.closeHandler = handler
     def SetCreatedHandler(self,handler): self.createdHandler = handler
     def Close(self): self.stage.close()
@@ -507,8 +543,7 @@ class EzWindow(Application):
     def YesNo(title, message, stage=None): return EzYesNo(title,message,self.stage)
     def FileOpenDialog(self, initialFile): return EzFileOpenDialog(initialFile, self.stage)
     def FileSaveDialog(self, initialFile): return EzFileSaveDialog(initialFile, self.stage)
-    
-    
+  
 #
 # Application
 #
@@ -539,8 +574,12 @@ class FxApp(EzWindow):
                 { "name" : "ToggleButton", "label" : "Toggle", "handler" : self.onToggle, "tooltip" : "Toggle", 'icon' : 'icon/open.png'  },
                 { "name" : "CheckBox", "label" : "Check", "handler" : self.onCheck, "tooltip" : "Check", 'icon' : 'icon/open.png'  },
             ],[
-                { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit", 'icon' : 'icon/exit.png'  },
+                { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit", 'icon' : 'icon/exit.png', 'icon_top' : True  },
             ]]
+        self.status = [
+                { "name" : "ProgressBar", 'key' : 'progress' },
+                { "name" : "<>"},
+            ]
         tab1 = [[ { "name" : "TextArea", "expand" : True },
                   { "expand" : True }, ]]
         tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : self.onListBox, 'items' : ["apple","orange"], 'expand' : True },
@@ -556,7 +595,6 @@ class FxApp(EzWindow):
                 { "name" : "TextField", "key" : "text", "expand" : True, "menu" : self.menu },
                 { "name" : "Button",  "label" : "Browse", "tooltip" : "Open File", "handler" : self.onBrowse  },
                 { "name" : "Button",  "label" : "About", "handler" : self.onAbout, "menu" : self.menu  },
-                { "name" : "ProgressBar", 'key' : 'progress' },
             ],  
             [ # hbox
                 { "name" : "HSplit", "items" : [ split1, split2 ] , "first" : 0.5, "expand" : True},
@@ -585,15 +623,15 @@ class FxApp(EzWindow):
     def onChoice(self,newvalue):
         c = GetControl('choice')
         t = GetControl('texttool')
-        t.SetText( c.GetSelectedItem() )
+        if c and t: t.SetText( c.GetSelectedItem() )
     def onCombo(self,newvalue):
         c = GetControl('combo')
         t = GetControl('texttool')
-        t.SetText( c.GetSelectedItem() )
+        if c and t: t.SetText( c.GetSelectedItem() )
     def onListBox(self,newvalue):
         c = GetControl('listbox')
         t = GetControl('texttool')
-        t.SetText( c.GetSelectedItem() )
+        if c and t: t.SetText( c.GetSelectedItem() )
     def onToggle(self,newvalue):
         print("toggle")
     def onCheck(self,newvalue):
