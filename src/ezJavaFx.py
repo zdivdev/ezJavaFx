@@ -186,6 +186,13 @@ class EzTabPane():
 #
 
 class EzControl():
+    def Initialize(self,h):
+        from javafx.scene.control import Tooltip        
+        if h.get('width'): self.ctrl.setPrefSize(h['width'], -1);
+        if h.get('fontsize'): self.ctrl.setStyle("-fx-font: " + h['fontsize'] + " arial;");                
+        if h.get('tooltip'): self.ctrl.setTooltip(Tooltip(h['tooltip']))           
+        if h.get('handler'): self.ctrl.setOnAction(h['handler'])
+        if h.get('menu'): self.ctrl.setContextMenu(EzContextMenu(h['menu']))
     def SetBackground(self,color): # {D8BFD8}
         self.ctrl.setStyle("-fx-background-color: #" + color + ";")
     def SetFontSize(self,size):
@@ -196,7 +203,7 @@ class EzControl():
         from javafx.scene.image import ImageView
         from javafx.scene.control import ContentDisplay;
         self.ctrl.setGraphic(ImageView(Image(FileInputStream(icon))))
-        if top: self.ctrl.setContentDisplay(ContentDisplay.TOP);
+        if top: self.ctrl.setContentDisplay(ContentDisplay.TOP)
 
 class EzLabel(EzControl):
     def __init__(self,h):
@@ -204,15 +211,17 @@ class EzLabel(EzControl):
         self.ctrl = Label()
         self.ctrl.setText(h.get('label'))
         if h.get('icon'): self.SetIcon( h['icon'] )
+        self.Initialize(h)
         #ctrl.setAlignment(Pos.CENTER);
         
 class EzButton(EzControl):
-    def __init__(self,h):
+    def __init__(self,h):   
         from javafx.scene.control import Button
         self.ctrl = Button()
         self.ctrl.setText(h.get('label'))
         if h.get('handler'): self.ctrl.setOnAction( h['handler'] )
         if h.get('icon'): self.SetIcon( h['icon'], True )
+        self.Initialize(h)
 
 class EzToggleButton(EzControl):
     def __init__(self,h):
@@ -221,9 +230,25 @@ class EzToggleButton(EzControl):
         self.ctrl.setText(h.get('label'))
         if h.get('handler'): self.ctrl.setOnAction( h['handler'] )
         if h.get('icon'): self.SetIcon( h['icon'] )
+        self.Initialize(h)
     def IsSelected(self):
         return self.ctrl.isSelected()
-
+    def SetSelected(self,v):
+        return self.ctrl.setSelected(v)
+        
+class EzCheckBox(EzControl):
+    def __init__(self,h):
+        from javafx.scene.control import CheckBox
+        self.ctrl = CheckBox()
+        self.ctrl.setText(h.get('label'))
+        if h.get('handler'): self.ctrl.setOnAction( h['handler'] )
+        if h.get('icon'): self.SetIcon( h['icon'] )
+        self.Initialize(h)
+    def IsSelected(self):
+        return self.ctrl.isSelected()
+    def SetSelected(self,v):
+        return self.ctrl.setSelected(v)
+        
 class EzChoiceBox(EzControl):
     def __init__(self,h):
         from javafx.beans.value import ChangeListener
@@ -232,13 +257,13 @@ class EzChoiceBox(EzControl):
         self.ctrl = ChoiceBox()
         if h.get('items'): self.ctrl.getItems().addAll( h['items'] );
         self.ctrl.getSelectionModel().selectFirst()    
+        self.Initialize(h)
     def Add(self,item):
         self.ctrl.getItems().add(item);
     def GetSelectedItem(self):
         return self.ctrl.getSelectionModel().getSelectedItem()
     def GetSelectedIndex(self):
         return self.ctrl.getSelectionModel().getSelectedIndex()
-
 
 class EzComboBox(EzControl):
     def __init__(self,h):
@@ -248,6 +273,7 @@ class EzComboBox(EzControl):
         self.ctrl = ComboBox()
         if h.get('items'): self.ctrl.getItems().addAll( h['items'] );
         self.ctrl.getSelectionModel().selectFirst()    
+        self.Initialize(h)
     def Add(self,item):
         self.ctrl.getItems().add(item);
     def GetSelectedItem(self):
@@ -270,6 +296,7 @@ class EzTextField(EzText):
         self.ctrl = TextField()
         self.ctrl.setText(h.get('text'))
         SetFileDropHandler( self.ctrl, self.DropHandler )
+        self.Initialize(h)
     def DropHandler(self,files):
         self.ctrl.setText( files.get(0).getPath() )
         
@@ -278,16 +305,31 @@ class EzTextArea(EzText):
         from javafx.scene.control import TextArea
         self.ctrl = TextArea()
         self.ctrl.setText(h.get('text'))
+        self.Initialize(h)
+
+class EzProgressBar(EzControl):
+    def __init__(self,h):   
+        from javafx.scene.control import ProgressBar
+        self.ctrl = ProgressBar()
+        self.Initialize(h)
+    def GetValue(self):
+        return self.ctrl.getProgress()
+    def SetValue(self,v):
+        self.ctrl.setProgress(v)
 
 #
 # Window
 #
 
+def RunLater(handler):
+    from javafx.application import Platform
+    Platform.runLater(handler)
+
 def DragOver(event):
-    from javafx.scene.input import TransferMode;
+    from javafx.scene.input import TransferMode
     if event.getDragboard().hasFiles():
-        event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-    event.consume();
+        event.acceptTransferModes(TransferMode.COPY_OR_MOVE)
+    event.consume()
 
 def DragDropped(handler):
     from javafx.scene.input import DragEvent
@@ -308,10 +350,11 @@ def SetFileDropHandler(ctrl,handler):
 
 def EzMenu(name,menu_table):
     from javafx.scene.control import Menu
-    from javafx.scene.control import MenuBar
+    from javafx.scene.control import ContextMenu
     from javafx.scene.control import MenuItem
     from javafx.scene.control import SeparatorMenuItem
-    menu = Menu(name)
+    if not name: menu = ContextMenu()
+    else: menu = Menu(name)
     for m in menu_table:
         if not m.get('name') or m['name'] == '-':
             menu.getItems().add(SeparatorMenuItem());
@@ -324,13 +367,12 @@ def EzMenu(name,menu_table):
             menu.getItems().add(item);
     return menu
 
+def EzContextMenu(menu_table):
+    return EzMenu(None,menu_table)
+    
 def EzMenuBar(menubar_table):
-    from javafx.scene.control import Menu
     from javafx.scene.control import MenuBar
-    from javafx.scene.control import MenuItem
-    from javafx.scene.control import SeparatorMenuItem
     menubar = MenuBar()
-  
     for m in menubar_table:
         if m.get('name'):
             menubar.getMenus().add(EzMenu(m['name'],m['item']))
@@ -351,15 +393,17 @@ def EzToolBar(toolbar_table):
         name = h['name'] 
         if   name == 'Label': f = EzLabel(h)
         elif name == 'Button': f = EzButton(h)
-        elif name == 'ToggleButton': f = EzToggleButton(h)
-        elif name == 'TextField': f = EzTextField(h)
+        elif name == 'CheckBox': f = EzCheckBox(h)
         elif name == 'ChoiceBox': f = EzChoiceBox(h)
         elif name == 'ComboBox': f = EzComboBox(h)
+        elif name == 'ProgressBar': f = EzProgressBar(h)
+        elif name == 'ToggleButton': f = EzToggleButton(h)
+        elif name == 'TextField': f = EzTextField(h)
         else: continue  
-        if h.get('width'): f.ctrl.setPrefSize(h['width'], -1);
-        if h.get('fontsize'): f.ctrl.setStyle("-fx-font: " + h['fontsize'] + " arial;");                
-        if h.get('tooltip'): f.ctrl.setTooltip(Tooltip(h['tooltip']))           
-        if h.get('handler'): f.ctrl.setOnAction(h['handler'])
+        #if h.get('width'): f.ctrl.setPrefSize(h['width'], -1);
+        #if h.get('fontsize'): f.ctrl.setStyle("-fx-font: " + h['fontsize'] + " arial;");                
+        #if h.get('tooltip'): f.ctrl.setTooltip(Tooltip(h['tooltip']))           
+        #if h.get('handler'): f.ctrl.setOnAction(h['handler'])
         if h.get('key'): __ctrl_table[h['key']] = f        
         toolbar.getItems().add(f.ctrl);
     return toolbar
@@ -377,14 +421,16 @@ def EzLayout(content):
                 continue
             if   name == 'Label': f = EzLabel(h)
             elif name == 'Button': f = EzButton(h)
-            elif name == 'ToggleButton': f = EzToggleButton(h)
+            elif name == 'CheckBox': f = EzCheckBox(h)
             elif name == 'ChoiceBox': f = EzChoiceBox(h)
             elif name == 'ComboBox': f = EzComboBox(h)
+            elif name == 'ProgressBar': f = EzProgressBar(h)
             elif name == 'TextField': f = EzTextField(h)
             elif name == 'TextArea': f = EzTextArea(h)
+            elif name == 'ToggleButton': f = EzToggleButton(h)
+            elif name == 'TabPane': f = EzTabPane(h)
             elif name == 'HSplit': f = EzHSplitPane(h)
             elif name == 'VSplit': f = EzVSplitPane(h)
-            elif name == 'TabPane': f = EzTabPane(h)
             else: continue
             
             width = -1
@@ -392,9 +438,8 @@ def EzLayout(content):
             if h.get('width') : width  = h['width']
             if h.get('height'): height = h['height']
             f.ctrl.setPrefSize(width, height);
-
-            if h.get('fontsize'): f.ctrl.setStyle("-fx-font: " + h['fontsize'] + " arial;");                
-            if h.get('tooltip'): f.ctrl.setTooltip(Tooltip(h['tooltip']))
+            #if h.get('fontsize'): f.ctrl.setStyle("-fx-font: " + h['fontsize'] + " arial;");                
+            #if h.get('tooltip'): f.ctrl.setTooltip(Tooltip(h['tooltip']))
             if h.get('key'): __ctrl_table[h['key']] = f
             hbox.addItem(f.ctrl,expand=h.get('expand'))
         vbox.addItem(hbox.ctrl,expand=expand)
@@ -414,8 +459,11 @@ class EzWindow(Application):
         pane = EzBorderPane(self)
         self.scene = Scene(pane.ctrl, 640, 400)
         self.stage.setScene(self.scene)
+        if self.createdHandler: self.createdHandler()
         self.stage.show()
+
     def SetCloseHandler(self,handler): self.closeHandler = handler
+    def SetCreatedHandler(self,handler): self.createdHandler = handler
     def Close(self): self.stage.close()
     def SetContent(self,content): self.content = content
     def Alert(self, title, message): EzAlert(title,message,self.stage)
@@ -428,7 +476,12 @@ class EzWindow(Application):
 # Application
 #
 
-      
+def StartThread(handler,args):
+    import threading
+    thread = threading.Thread(target=handler,args=args)
+    thread.daemon = True
+    thread.start()
+    
 class FxApp(EzWindow):
     def __init__(self):
         self.menu = [
@@ -442,12 +495,13 @@ class FxApp(EzWindow):
                     { 'name' : "About", 'item' : self.onAbout, 'icon' : 'help' } ]
             }]
         self.tool = [
-                { "name" : "Label", "label" : "Address:" },
+                { "name" : "Label", "label" : "Address:", "menu" : self.menu },
                 { "name" : "ChoiceBox", "key" : "choice", 'handler' : self.onChoice, 'items' : ["apple","orange"] },
                 { "name" : "ComboBox", "key" : "combo", 'handler' : self.onCombo, 'items' : ["apple","orange"] },
                 { "name" : "TextField", "key" : "texttool", "width" : 100 },
                 { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit", 'icon' : 'icon/exit.png'  },
                 { "name" : "ToggleButton", "label" : "Toggle", "handler" : self.onToggle, "tooltip" : "Toggle", 'icon' : 'icon/open.png'  },
+                { "name" : "CheckBox", "label" : "Check", "handler" : self.onCheck, "tooltip" : "Check", 'icon' : 'icon/open.png'  },
             ]
         tab1 = [[ { "name" : "TextArea", "expand" : True },
                   { "expand" : True }, ]]
@@ -460,10 +514,11 @@ class FxApp(EzWindow):
                     { "expand" : True }, ]] 
         self.content = [ # vbox
             [ # hbox
-                { "name" : "Label", "label" : "Address:" },
-                { "name" : "TextField", "key" : "text", "expand" : True },
+                { "name" : "Label", "label" : "Address:", "menu" : self.menu },
+                { "name" : "TextField", "key" : "text", "expand" : True, "menu" : self.menu },
                 { "name" : "Button",  "label" : "Browse", "tooltip" : "Open File", "handler" : self.onBrowse  },
-                { "name" : "Button",  "label" : "About", "handler" : self.onAbout  },
+                { "name" : "Button",  "label" : "About", "handler" : self.onAbout, "menu" : self.menu  },
+                { "name" : "ProgressBar", 'key' : 'progress' },
             ],  
             [ # hbox
                 { "name" : "HSplit", "items" : [ split1, split2 ] , "first" : 0.5, "expand" : True},
@@ -471,6 +526,8 @@ class FxApp(EzWindow):
             ],                
         ]
         self.SetCloseHandler(self.onClose)
+        self.SetCreatedHandler(self.created)
+
     def onAbout(self,event):
         v = EzYesNo("Global", "Dialog")
         if v: self.Alert("Result", "Yes")
@@ -478,7 +535,7 @@ class FxApp(EzWindow):
     def onBrowse(self,event):
         f = EzFileOpenDialog(None)
         ctrl = GetControl('text')
-        if ctrl: ctrl.setText(f.getPath())
+        if ctrl and f: ctrl.SetText(f.getPath())
     def onExit(self,event):
         from javafx.application import Platform
         Platform.exit()
@@ -497,6 +554,17 @@ class FxApp(EzWindow):
         t.SetText( c.GetSelectedItem() )
     def onToggle(self,newvalue):
         print("toggle")
+    def onCheck(self,newvalue):
+        print("toggle")
+    def threadHandler(args):
+        import time
+        p = GetControl('progress')
+        for i in range(100):
+            RunLater(lambda : p.SetValue(1.0*i/100))
+            time.sleep(0.1)
+    def created(self):
+        StartThread(self.threadHandler,None)
+        DumpControlTable()      
         
 if __name__ == '__main__':
     Application.launch(FxApp().class, [])
