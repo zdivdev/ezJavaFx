@@ -190,7 +190,7 @@ class EzControl():
         self.ctrl.setStyle("-fx-background-color: #" + color + ";")
     def SetFontSize(self,size):
         self.ctrl.setStyle("-fx-font-size: " + str(size) + ";")
-    def SetIcon(self,icon,top):
+    def SetIcon(self,icon,top=False):
         from java.io import FileInputStream
         from javafx.scene.image import Image
         from javafx.scene.image import ImageView
