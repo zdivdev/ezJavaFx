@@ -1,3 +1,4 @@
+
 from javafx.application import Application
 from javafx.scene import Scene
 from javafx.scene import Node
@@ -131,7 +132,7 @@ class EzBorderPane():
         from javafx.geometry import Insets
         self.ctrl = BorderPane()
         self.ctrl.setPadding(Insets(0, 0, 0, 0))
-        if w.content: self.setCenter(EzLayout(w.content))
+        if w.content: self.setCenter(EzLayout(w.content,self.ctrl))
         v = EzVBox()
         if w.menu: v.addItem(EzMenuBar(w.menu))
         for m in w.tool:
@@ -150,7 +151,7 @@ class EzSplitPane(object):
         items = layout.get('items')
         if items:
             for item in items:
-                self.addItem(EzLayout(item))
+                self.addItem(EzLayout(item,self.ctrl))
         
 class EzVSplitPane(EzSplitPane):
     def __init__(self,h):
@@ -178,7 +179,7 @@ class EzTabPane():
         items = h.get('items')
         if labels and items:
             for i in range(0,len(items)):
-                self.addItem( labels[i], EzLayout(items[i]))        
+                self.addItem( labels[i], EzLayout(items[i],self.ctrl))        
     def addItem(self, title, item):
         from javafx.scene.control import Tab
         tab = Tab()
@@ -226,6 +227,43 @@ class EzLabel(EzControl):
         self.ctrl.setText(h.get('label'))
         if h.get('handler'): self.ctrl.setOnAction(h['handler'])
         #ctrl.setAlignment(Pos.CENTER);
+
+class EzImageView(EzControl):
+    def __init__(self,h,parent):
+        from  java.io import File
+        from  javafx.scene.image import Image
+        from  javafx.scene.image import ImageView
+        if h.get('file'):
+            self.ctrl = ImageView(Image(File(h['file']).toURI().toString()))
+        else:
+            self.ctrl = ImageView()
+        self.ctrl.setPreserveRatio(True);
+        if h.get('fitwidth'): self.ctrl.setFitWidth(h['fitwidth'])
+        if h.get('fitheight'): self.ctrl.setFitHeight(h['fitheight'])
+        if h.get('bindwidth'): self.ctrl.fitWidthProperty().bind(parent.widthProperty())
+        if h.get('bindheight'): self.ctrl.fitHeightProperty().bind(parent.heightProperty())  
+        self.Initialize(h)
+        if h.get('handler'): self.ctrl.setOnAction(h['handler'])
+
+
+class EzScrollImageView(EzControl):
+    def __init__(self,h,parent):
+        from  java.io import File
+        from  javafx.scene.image import Image
+        from  javafx.scene.image import ImageView
+        from javafx.scene.control import ScrollPane
+        from javafx.scene.control.ScrollPane import ScrollBarPolicy        
+        self.ctrl = ScrollPane()
+        img = EzImageView(h,self.ctrl)
+        box = EzHBox(1,1)
+        box.addItem(img.ctrl,True)
+        #scroll.setHmin(32)
+        #scroll.setHmax(32)
+        self.ctrl.setVbarPolicy(ScrollBarPolicy.AS_NEEDED)
+        self.ctrl.setHbarPolicy(ScrollBarPolicy.ALWAYS)
+        self.ctrl.setPannable(True)
+        self.ctrl.setFitToHeight(True)
+        self.ctrl.setContent(box.ctrl)
         
 class EzButton(EzControl):
     def __init__(self,h):   
@@ -324,7 +362,6 @@ class EzTreeView(EzControl):
         return self.ctrl.getSelectionModel().getSelectedIndex()
     def GetSelectedItem(self):
         return self.ctrl.getSelectionModel().getSelectedItem()
-        #.getParent().getChildren().indexOf(selectedItem);
     def GetSelectedItemText(self):
         return self.ctrl.getSelectionModel().getSelectedItem().getValue()
     def GetSelectedItemPath(self,delim=""):
@@ -483,7 +520,7 @@ def EzStatusBar(statusbar_table):
         hbox.addItem(f.ctrl);
     return hbox.ctrl
 
-def EzLayout(content):
+def EzLayout(content,parent):
     from javafx.scene.control import Tooltip
     vbox = EzVBox(1,1)
     for v in content:
@@ -495,6 +532,8 @@ def EzLayout(content):
                 if h.get('expand'): expand = h['expand']
                 continue
             if   name == 'Label': f = EzLabel(h)
+            elif name == 'ImageView': f = EzImageView(h,parent)
+            elif name == 'ScrollImageView': f = EzScrollImageView(h,parent)
             elif name == 'Button': f = EzButton(h)
             elif name == 'ToggleButton': f = EzToggleButton(h)
             elif name == 'CheckBox': f = EzCheckBox(h)
@@ -505,7 +544,7 @@ def EzLayout(content):
             elif name == 'ProgressBar': f = EzProgressBar(h)
             elif name == 'TextField': f = EzTextField(h)
             elif name == 'TextArea': f = EzTextArea(h)
-            elif name == 'TabPane': f = EzTabPane(h)
+            elif name == 'Notebook': f = EzTabPane(h)
             elif name == 'HSplit': f = EzHSplitPane(h)
             elif name == 'VSplit': f = EzVSplitPane(h)
             else: continue
@@ -610,8 +649,10 @@ class FxApp(EzWindow):
                   { "expand" : True }, ]]
         tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : self.onListBox, 'items' : ["apple","orange"], 'expand' : True },
                   { "expand" : True }, ]]
+        tab3 = [[ { "name" : "ScrollImageView", 'file' : "Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
+                  { "expand" : True }, ]]
         split1 = [[
-                { "name" : "TabPane", "labels" : [ "Tab1", "Tab2" ], "items" : [ tab1, tab2 ], "expand" : True },
+                { "name" : "Notebook", "labels" : [ "Tree", "List", "Image" ], "items" : [ tab1, tab2, tab3 ], "expand" : True },
                 { "expand" : True }, ]]
         split2 = [[ { "name" : "TextArea", "expand" : True },
                     { "expand" : True }, ]] 
