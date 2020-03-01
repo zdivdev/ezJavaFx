@@ -7,11 +7,15 @@ from javafx.scene.layout import HBox
 from javafx.scene.layout import Priority
 from javafx.scene.input import Clipboard
 from javafx.scene.input import ClipboardContent 
+from javafx.scene.image import Image 
+from javafx.scene.image import ImageView
 from javafx.geometry import Insets
 from javafx.geometry import Insets
 from javafx.geometry import Orientation
 from javafx.geometry import Pos
 from javafx.embed.swing import SwingFXUtils
+from java.io import File
+from java.io import FileInputStream
 
 #
 # Control Table
@@ -212,9 +216,6 @@ class EzControl():
     def SetFontSize(self,size):
         self.ctrl.setStyle("-fx-font-size: " + str(size) + ";")
     def SetIcon(self,icon,top=False):
-        from java.io import FileInputStream
-        from javafx.scene.image import Image
-        from javafx.scene.image import ImageView
         from javafx.scene.control import ContentDisplay;
         self.ctrl.setGraphic(ImageView(Image(FileInputStream(icon))))
         if top: self.ctrl.setContentDisplay(ContentDisplay.TOP)
@@ -230,13 +231,8 @@ class EzLabel(EzControl):
 
 class EzImageView(EzControl):
     def __init__(self,h,parent):
-        from  java.io import File
-        from  javafx.scene.image import Image
-        from  javafx.scene.image import ImageView
-        if h.get('file'):
-            self.ctrl = ImageView(Image(File(h['file']).toURI().toString()))
-        else:
-            self.ctrl = ImageView()
+        if h.get('file'): self.ctrl = ImageView(Image(File(h['file']).toURI().toString()))
+        else: self.ctrl = ImageView()
         self.ctrl.setPreserveRatio(True);
         if h.get('fitwidth'): self.ctrl.setFitWidth(h['fitwidth'])
         if h.get('fitheight'): self.ctrl.setFitHeight(h['fitheight'])
@@ -248,9 +244,6 @@ class EzImageView(EzControl):
 
 class EzScrollImageView(EzControl):
     def __init__(self,h,parent):
-        from  java.io import File
-        from  javafx.scene.image import Image
-        from  javafx.scene.image import ImageView
         from javafx.scene.control import ScrollPane
         from javafx.scene.control.ScrollPane import ScrollBarPolicy        
         self.ctrl = ScrollPane()
@@ -418,6 +411,37 @@ class EzProgressBar(EzControl):
 def RunLater(handler):
     from javafx.application import Platform
     Platform.runLater(handler)
+
+def Exec():
+    from java.lang import Runtime
+    from java.io import BufferedReader
+    from java.io import InputStreamReader
+
+    process = Runtime.getRuntime().exec(cmd);
+    inp = BufferedReader(InputStreamReader(process.getInputStream(),"euc-kr"))
+    out = ""
+    line = inp.readLine()
+    while line:
+        out = out + line
+        line = inp.readLine()
+
+def Execute(cmd):
+    '''
+    import os
+    os.system(cmd)
+    '''
+    import subprocess
+    try:
+        out = subprocess.check_output(cmd)
+        return 0,out
+    except:
+        return -1,""
+    
+def StartThread(handler,args):
+    import threading
+    thread = threading.Thread(target=handler,args=args)
+    thread.daemon = True
+    thread.start()
 
 def DragOver(event):
     from javafx.scene.input import TransferMode
@@ -593,6 +617,8 @@ class EzWindow(Application):
         self.ctrl  = __ctrl_table
         self.stage = stage
         self.stage.setTitle("FxApp Example")
+        if self.title: self.stage.setTitle(self.title)
+        if self.icon: self.stage.getIcons().add(Image(FileInputStream(self.icon)))   
         if self.closeHandler: self.stage.setOnCloseRequest(self.closeHandler)
         Platform.setImplicitExit(True)
         pane = EzBorderPane(self)
@@ -600,6 +626,8 @@ class EzWindow(Application):
         self.stage.setScene(self.scene)
         if self.createdHandler: self.createdHandler()
         self.stage.show()
+    def SetTitle(self,title): self.title = title
+    def SetIcon(self,icon): self.icon = icon
     def SetCloseHandler(self,handler): self.closeHandler = handler
     def SetCreatedHandler(self,handler): self.createdHandler = handler
     def Close(self): self.stage.close()
@@ -612,13 +640,7 @@ class EzWindow(Application):
 #
 # Application
 #
-
-def StartThread(handler,args):
-    import threading
-    thread = threading.Thread(target=handler,args=args)
-    thread.daemon = True
-    thread.start()
-    
+ 
 class FxApp(EzWindow):
     def __init__(self):
         self.menu = [
@@ -654,14 +676,14 @@ class FxApp(EzWindow):
         split1 = [[
                 { "name" : "Notebook", "labels" : [ "Tree", "List", "Image" ], "items" : [ tab1, tab2, tab3 ], "expand" : True },
                 { "expand" : True }, ]]
-        split2 = [[ { "name" : "TextArea", "expand" : True },
+        split2 = [[ { "name" : "TextArea", 'key' : 'textarea', "expand" : True },
                     { "expand" : True }, ]] 
         self.content = [ # vbox
             [ # hbox
                 { "name" : "Label", "label" : "Address:", "menu" : self.menu },
                 { "name" : "TextField", "key" : "text", "expand" : True, "menu" : self.menu },
                 { "name" : "Button",  "label" : "Browse", "tooltip" : "Open File", "handler" : self.onBrowse  },
-                { "name" : "Button",  "label" : "About", "handler" : self.onAbout, "menu" : self.menu  },
+                { "name" : "Button",  "label" : "Run", "handler" : self.onRun, "menu" : self.menu  },
             ],  
             [ # hbox
                 { "name" : "HSplit", "items" : [ split1, split2 ] , "first" : 0.5, "expand" : True},
@@ -670,6 +692,9 @@ class FxApp(EzWindow):
         ]
         self.SetCloseHandler(self.onClose)
         self.SetCreatedHandler(self.created)
+        self.SetTitle("ezJavaFx Demo")
+        self.SetIcon("Lenna.png")
+        
 
     def onAbout(self,event):
         v = EzYesNo("Global", "Dialog")
@@ -687,19 +712,19 @@ class FxApp(EzWindow):
         #self.Close()
     def onClose(self,event):
         v = EzYesNo("Alert", "Do you want to quit ?", self.stage)
-    def onChoice(self,newvalue):
+    def onChoice(self,event):
         c = GetControl('choice')
         t = GetControl('texttool')
         if c and t: t.SetText( c.GetSelectedItem() )
-    def onCombo(self,newvalue):
+    def onCombo(self,event):
         c = GetControl('combo')
         t = GetControl('texttool')
         if c and t: t.SetText( c.GetSelectedItem() )
-    def onListBox(self,newvalue):
+    def onListBox(self,event):
         c = GetControl('listbox')
         t = GetControl('texttool')
         if c and t: t.SetText( c.GetSelectedItem() )
-    def onTreeView(self,newvalue):
+    def onTreeView(self,event):
         c = GetControl('treeview')
         t = GetControl('texttool')
         print(c.GetSelectedItem())
@@ -717,6 +742,13 @@ class FxApp(EzWindow):
     def created(self):
         StartThread(self.threadHandler,None)
         DumpControlTable()      
-        
+    def onRun(self,event):
+        text = GetControl('text')
+        print(text.GetText())
+        if text:
+            rv, out = Execute(text.GetText())
+            textarea = GetControl('textarea')
+            textarea.SetText(str(rv) + '\n' + out)
+            
 if __name__ == '__main__':
     Application.launch(FxApp().class, [])
