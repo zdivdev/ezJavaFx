@@ -349,8 +349,14 @@ class EzTreeView(EzControl):
         self.ctrl = TreeView(self.root)
         self.Initialize(h)
         if h.get('handler'): self.ctrl.getSelectionModel().selectedItemProperty().addListener(h['handler'])
-        item = TreeItem("Message11")       
-        self.root.getChildren().add(item)
+    def AddRootItem(self,label):
+        return self.AddItem(label)
+    def AddItem(self,label,parent=None):
+        from javafx.scene.control import TreeItem
+        item = TreeItem(label)
+        if parent: parent.getChildren().add(item)
+        else: self.root.getChildren().add(item)
+        return item
     def GetSelectedIndex(self):
         return self.ctrl.getSelectionModel().getSelectedIndex()
     def GetSelectedItem(self):
@@ -364,16 +370,11 @@ class EzTreeView(EzControl):
             item = item.getParent()
             path = item.getValue() + delim + path
         return path
-
-'''
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TablePosition;
-import javafx.scene.control.TableView;
-'''
-
-
+    def GetParentItem(self,item):
+        return item.getParent()
+    def GetItemValue(self,item):
+        return item.getValue()
+        
 class FxTableRow():
     def __init__(self,items=None):
         self.values = []
@@ -392,6 +393,7 @@ class EzTableView(EzControl):
         if h.get('widths'): self.SetColumnWidth(h['widths']) 
         if h.get('rwidths'): self.SetColumnWidthPercent(h['rwidths']) 
         if h.get('aligns'): self.SetColumnAlign(h['aligns']) 
+        if h.get('handler'): self.ctrl.getSelectionModel().selectedItemProperty().addListener(h['handler'])
     def SetColumn(self,labels):
         from javafx.scene.control import TableColumn
         for label in labels: self.AddColumn(label)
@@ -421,6 +423,28 @@ class EzTableView(EzControl):
             if aligns[i] < 0: column.setStyle( "-fx-alignment: CENTER-LEFT;")
             elif aligns[i] == 0: column.setStyle( "-fx-alignment: CENTER;")
             elif aligns[i] > 0: column.setStyle( "-fx-alignment: CENTER-RIGHT;")
+    def ClearSelection(self):
+        self.ctrl.getSelectionModel().clearSelection()
+    def SelectFirst(self):
+        self.ctrl.getSelectionModel().selectFirst()
+    def SelectLast(self):
+        self.ctrl.getSelectionModel().selectLast();
+    def EnableMultiSelection(self):
+        from javafx.scene.control import SelectionMode
+        self.ctrl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE)
+    def GetSelectedIndex(self):
+        return self.ctrl.getSelectionModel().getSelectedIndex()
+    def GetSelectedItem(self):
+        index = self.ctrl.getSelectionModel().getSelectedIndex()
+        return self.ctrl.getItems().get(index).values
+    def GetSelectedItems(self):
+        items = []
+        for item in self.ctrl.getSelectionModel().getSelectedItems():
+            items.append( item.values )
+        return items;
+    def RemoveSelectedItems(self):
+        self.ctrl.getItems().removeAll(self.ctrl.getSelectionModel().getSelectedItems());
+
 
 class EzText(EzControl):
     def GetText(self): return self.ctrl.getText()
@@ -725,13 +749,13 @@ class FxApp(EzWindow):
                 { "name" : "ProgressBar", 'key' : 'progress' },
                 { "name" : "<>"},
             ]
-        tab1 = [[ { "name" : "TreeView", "key" : "treeview", 'handler' : self.onTreeView,"expand" : True },
+        tab1 = [[ { "name" : "TreeView", "key" : "tree", 'handler' : self.onTreeView,"expand" : True },
                   { "expand" : True }, ]]
         tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : self.onListBox, 'items' : ["apple","orange"], 'expand' : True },
                   { "expand" : True }, ]]
         tab3 = [[ { "name" : "ScrollImageView", 'file' : "Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
                   { "expand" : True }, ]]
-        tab4 = [[ { "name" : "Table", 'key':'table', 'columns' : ['First','Mid','Last'], 'rwidths' : [100,50,100], 'aligns':[1,0,-1], 'expand' : True },
+        tab4 = [[ { "name" : "Table", 'key':'table', 'columns' : ['First','Mid','Last'], 'rwidths' : [100,50,100], 'aligns':[1,0,-1], 'handler':self.onTableView, 'expand' : True },
                   { "expand" : True }, ]]
         split1 = [[
                 { "name" : "Notebook", "labels" : [ "Tree", "List", "Image", "Table" ], "items" : [ tab1, tab2, tab3, tab4 ], "expand" : True },
@@ -785,10 +809,14 @@ class FxApp(EzWindow):
         t = GetControl('texttool')
         if c and t: t.SetText( c.GetSelectedItem() )
     def onTreeView(self,event):
-        c = GetControl('treeview')
+        c = GetControl('tree')
         t = GetControl('texttool')
         print(c.GetSelectedItem())
         if c and t: t.SetText( c.GetSelectedItemPath("-") )
+    def onTableView(self,event):
+        c = GetControl('table')
+        for item in c.GetSelectedItems():
+            print(item)
     def onToggle(self,newvalue):
         print("toggle")
     def onCheck(self,newvalue):
@@ -801,8 +829,16 @@ class FxApp(EzWindow):
             time.sleep(0.1)
     def created(self):
         table = GetControl('table')
+        table.EnableMultiSelection()
         table.AddRow(["Tom", "and", "Doe"])
         table.AddRow(["Jane", "and", "Deer"])
+        tree = GetControl('tree')
+        item = tree.AddRootItem("Item1")
+        tree.AddItem("Item1-1",item)
+        tree.AddItem("Item1-2",item)
+        item = tree.AddRootItem("Item2")
+        tree.AddItem("Item2-1",item)
+        tree.AddItem("Item2-2",item)
         StartThread(self.threadHandler,None)
         DumpControlTable()      
     def onRun(self,event):
