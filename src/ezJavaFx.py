@@ -365,6 +365,63 @@ class EzTreeView(EzControl):
             path = item.getValue() + delim + path
         return path
 
+'''
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TablePosition;
+import javafx.scene.control.TableView;
+'''
+
+
+class FxTableRow():
+    def __init__(self,items=None):
+        self.values = []
+        if items:
+            for item in items: self.AddItem(item)
+    def AddItem(self,item):
+        from javafx.beans.property import SimpleStringProperty
+        self.values.append(SimpleStringProperty(item))
+
+class EzTableView(EzControl):
+    def __init__(self,h):
+        from javafx.scene.control import TableView
+        self.ctrl = TableView()
+        self.Initialize(h)
+        if h.get('columns'): self.SetColumn(h['columns'])
+        if h.get('widths'): self.SetColumnWidth(h['widths']) 
+        if h.get('rwidths'): self.SetColumnWidthPercent(h['rwidths']) 
+        if h.get('aligns'): self.SetColumnAlign(h['aligns']) 
+    def SetColumn(self,labels):
+        from javafx.scene.control import TableColumn
+        for label in labels: self.AddColumn(label)
+    def AddColumn(self,label):
+        from javafx.scene.control import TableColumn
+        index = self.ctrl.getColumns().size()
+        column = TableColumn(label)
+        column.setCellValueFactory(lambda row : row.getValue().values[index])
+        self.ctrl.getColumns().add(column);
+    def AddRow(self,row):
+        self.ctrl.getItems().add(FxTableRow(row))
+    def SetColumnWidth(self,widths):
+        from javafx.scene.control import TableView
+        self.ctrl.setColumnResizePolicy( TableView.UNCONSTRAINED_RESIZE_POLICY )
+        for i in range(len(widths)):
+            column = self.ctrl.getColumns().get(i)
+            column.setPrefWidth( widths[i] )
+    def SetColumnWidthPercent(self,widths):
+        from javafx.scene.control import TableView
+        self.ctrl.setColumnResizePolicy( TableView.CONSTRAINED_RESIZE_POLICY )
+        for i in range(len(widths)):
+            column = self.ctrl.getColumns().get(i)
+            column.setMaxWidth( widths[i] * 100000 )
+    def SetColumnAlign(self,aligns):
+        for i in range(len(aligns)):
+            column = self.ctrl.getColumns().get(i)
+            if aligns[i] < 0: column.setStyle( "-fx-alignment: CENTER-LEFT;")
+            elif aligns[i] == 0: column.setStyle( "-fx-alignment: CENTER;")
+            elif aligns[i] > 0: column.setStyle( "-fx-alignment: CENTER-RIGHT;")
+
 class EzText(EzControl):
     def GetText(self): return self.ctrl.getText()
     def SetText(self,text): self.ctrl.setText(text)
@@ -565,6 +622,7 @@ def EzLayout(content,parent):
             elif name == 'ComboBox': f = EzComboBox(h)
             elif name == 'ListBox': f = EzListView(h)
             elif name == 'TreeView': f = EzTreeView(h)
+            elif name == 'Table': f = EzTableView(h)
             elif name == 'ProgressBar': f = EzProgressBar(h)
             elif name == 'TextField': f = EzTextField(h)
             elif name == 'TextArea': f = EzTextArea(h)
@@ -673,8 +731,10 @@ class FxApp(EzWindow):
                   { "expand" : True }, ]]
         tab3 = [[ { "name" : "ScrollImageView", 'file' : "Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
                   { "expand" : True }, ]]
+        tab4 = [[ { "name" : "Table", 'key':'table', 'columns' : ['First','Mid','Last'], 'rwidths' : [100,50,100], 'aligns':[1,0,-1], 'expand' : True },
+                  { "expand" : True }, ]]
         split1 = [[
-                { "name" : "Notebook", "labels" : [ "Tree", "List", "Image" ], "items" : [ tab1, tab2, tab3 ], "expand" : True },
+                { "name" : "Notebook", "labels" : [ "Tree", "List", "Image", "Table" ], "items" : [ tab1, tab2, tab3, tab4 ], "expand" : True },
                 { "expand" : True }, ]]
         split2 = [[ { "name" : "TextArea", 'key' : 'textarea', "expand" : True },
                     { "expand" : True }, ]] 
@@ -740,6 +800,9 @@ class FxApp(EzWindow):
             RunLater(lambda : p.SetValue(1.0*i/100))
             time.sleep(0.1)
     def created(self):
+        table = GetControl('table')
+        table.AddRow(["Tom", "and", "Doe"])
+        table.AddRow(["Jane", "and", "Deer"])
         StartThread(self.threadHandler,None)
         DumpControlTable()      
     def onRun(self,event):
