@@ -369,6 +369,9 @@ class EzTreeView(EzControl):
         return self.ctrl.getSelectionModel().getSelectedItem().getValue()
     def GetSelectedItemPath(self,delim=""):
         item = self.ctrl.getSelectionModel().getSelectedItem()
+        return self.GetItemPath(item)
+    def GetItemPath(self,item,delim=""):
+        item = self.ctrl.getSelectionModel().getSelectedItem()
         path = item.getValue()
         while item.getParent():
             item = item.getParent()
