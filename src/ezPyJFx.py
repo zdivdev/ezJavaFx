@@ -113,15 +113,17 @@ class EzControl():
         if h.get('menu'): self.ctrl.setContextMenu(EzContextMenu(h['menu']))
         if h.get('key'): _window__ctrl_table[h['key']] = self
         if h.get('fontsize'): self.SetFontSize(h['fontsize'])                
-        if h.get('icon'): self.SetIcon( h['icon'], h.get('icon_top') )
+        if h.get('icon'): self.SetIcon( h['icon'], h.get('size'), h.get('icon_top') )
             
     def SetBackground(self,color): # {D8BFD8}
         self.ctrl.setStyle("-fx-background-color: #" + color + ";")
     def SetFontSize(self,size):
         self.ctrl.setStyle("-fx-font-size: " + str(size) + ";")
-    def SetIcon(self,icon,top=False):
+    def SetIcon(self,icon,size=None,top=False):
         from javafx.scene.control import ContentDisplay;
-        self.ctrl.setGraphic(ImageView(Image(FileInputStream(icon))))
+        iv = ImageView(Image(FileInputStream(icon)))
+        if size: iv.setFitHeight(size); iv.setFitWidth(size)
+        self.ctrl.setGraphic(iv)
         if top: self.ctrl.setContentDisplay(ContentDisplay.TOP)
 
 class EzLabel(EzControl):
@@ -749,10 +751,10 @@ class EzApp(EzWindow):
                 { "name" : "ChoiceBox", "key" : "choice", 'handler' : self.onChoice, 'items' : ["apple","orange"] },
                 { "name" : "ComboBox", "key" : "combo", 'handler' : self.onCombo, 'items' : ["apple","orange"] },
                 { "name" : "TextField", "key" : "texttool", "width" : 100 },
-                { "name" : "ToggleButton", "label" : "Toggle", "handler" : self.onToggle, "tooltip" : "Toggle", 'icon' : 'icon/open.png'  },
-                { "name" : "CheckBox", "label" : "Check", "handler" : self.onCheck, "tooltip" : "Check", 'icon' : 'icon/open.png'  },
+                { "name" : "ToggleButton", "label" : "Toggle", "handler" : self.onToggle, "tooltip" : "Toggle", 'icon' : 'icon/folder512.png', 'size' : 16  },
+                { "name" : "CheckBox", "label" : "Check", "handler" : self.onCheck, "tooltip" : "Check", 'icon' : 'icon/folder512.png', 'size' : 16  },
             ],[
-                { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit", 'icon' : 'icon/exit.png', 'icon_top' : True  },
+                { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit", 'icon' : 'icon/folder512.png', 'size' : 16, 'icon_top' : True  },
             ]]
         self.status = [
                 { "name" : "ProgressBar", 'key' : 'progress' },
@@ -762,7 +764,7 @@ class EzApp(EzWindow):
                   { "expand" : True }, ]]
         tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : self.onListBox, 'items' : ["apple","orange"], 'expand' : True },
                   { "expand" : True }, ]]
-        tab3 = [[ { "name" : "ScrollImageView", 'file' : "Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
+        tab3 = [[ { "name" : "ScrollImageView", 'file' : "./icon/Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
                   { "expand" : True }, ]]
         tab4 = [[ { "name" : "Table", 'key':'table', 'columns' : ['First','Mid','Last'], 'rwidths' : [100,50,100], 'aligns':[1,0,-1], 'handler':self.onTableView, 'expand' : True },
                   { "expand" : True }, ]]
@@ -786,7 +788,7 @@ class EzApp(EzWindow):
         self.SetCloseHandler(self.onClose)
         self.SetCreatedHandler(self.created)
         self.SetTitle("ezJavaFx Demo")
-        self.SetIcon("Lenna.png")
+        self.SetIcon("./icon/Lenna.png")
         
     def onAbout(self,event):
         v = EzYesNoDialog("Global", "Dialog")
