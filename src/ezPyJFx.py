@@ -436,18 +436,11 @@ class EzHBox(EzBox):
         self.ctrl.setPadding( Insets( pad, pad, pad, pad ) )
 
 class EzBorderPane():
-    def __init__(self,w):
+    def __init__(self):
         from javafx.scene.layout import BorderPane
         from javafx.geometry import Insets
         self.ctrl = BorderPane()
         self.ctrl.setPadding(Insets(0, 0, 0, 0))
-        if w.content: self.setCenter(EzLayout(w.content,self.ctrl))
-        v = EzVBox()
-        if w.menu: v.addItem(EzMenuBar(w.menu))
-        for m in w.tool:
-            v.addItem(EzToolBar(m))
-        self.setTop(v.ctrl)
-        self.setBottom(EzStatusBar(w.status))
     def setTop(self,item):    self.ctrl.setTop(item)
     def setBottom(self,item): self.ctrl.setBottom(item)
     def setLeft(self,item):   self.ctrl.setLeft(item)
@@ -703,163 +696,204 @@ def putClipboardImage(image):
     content.putImage(SwingFXUtils.toFXImage(image, null))
     Clipboard.getSystemClipboard().setContent(content)
 
+class EzWindowVars():
+    def __init__(self):
+        self.ctrl = None
+        self.stage = None
+        self.createdHandler = None
+        self.closeHandler = None
+        self.title = None
+        self.icon = None
+        self.width = 800
+        self.height = 600
+        self.menu = None
+        self.tool = None
+        self.status = None
+        self.content = None
+
+__vars = EzWindowVars()
+       
 class EzWindow(Application):
+    def __init__(self):
+        print('EzWindow.__init__()');
+
     def start(self, stage):
+        print('EzWindow.start()');
         from javafx.application import Platform
-        self.ctrl  = _window__ctrl_table
-        self.stage = stage
-        self.stage.setTitle("FxApp Example")
-        if self.title: self.stage.setTitle(self.title)
-        if self.icon: self.stage.getIcons().add(Image(FileInputStream(self.icon)))   
-        if self.closeHandler: self.stage.setOnCloseRequest(self.closeHandler)
+        __vars.ctrl  = _window__ctrl_table
+        __vars.stage = stage
+        if __vars.title: __vars.stage.setTitle(__vars.title)
+        if __vars.icon: __vars.stage.getIcons().add(Image(FileInputStream(__vars.icon)))   
+        if __vars.closeHandler: __vars.stage.setOnCloseRequest(__vars.closeHandler)
         Platform.setImplicitExit(True)
-        pane = EzBorderPane(self)
-        self.scene = Scene(pane.ctrl, 640, 400)
-        self.stage.setScene(self.scene)
-        if self.createdHandler: self.createdHandler()
-        self.stage.show()
-    def Run(self): self.launch(self.class, [])        
-    def SetTitle(self,title): self.title = title
-    def SetIcon(self,icon): self.icon = icon
-    def SetCloseHandler(self,handler): self.closeHandler = handler
-    def SetCreatedHandler(self,handler): self.createdHandler = handler
-    def Close(self): self.stage.close()
-    def SetContent(self,content): self.content = content
-    def Alert(self, title, message): EzAlertDialog(title,message,self.stage)
-    def YesNo(title, message, stage=None): return EzYesNoDialog(title,message,self.stage)
-    def FileOpenDialog(self, initialFile): return EzFileOpenDialog(initialFile, self.stage)
-    def FileSaveDialog(self, initialFile): return EzFileSaveDialog(initialFile, self.stage)
+        vbox = EzVBox()
+        if __vars.menu: vbox.addItem(EzMenuBar(__vars.menu))
+        for m in __vars.tool: vbox.addItem(EzToolBar(m))
+        pane = EzBorderPane()
+        if __vars.content: pane.setCenter(EzLayout(__vars.content,pane.ctrl))
+        pane.setTop(vbox.ctrl)
+        pane.setBottom(EzStatusBar(__vars.status))
+        __vars.scene = Scene(pane.ctrl, __vars.width, __vars.height)
+        __vars.stage.setScene(__vars.scene)
+        if __vars.createdHandler: __vars.createdHandler()
+        __vars.stage.show()      
+    def Run(self): print('Run()'); self.launch(self.class, [])
+    def GetStage(self): return __vars.stage     
+    def SetTitle(self,title): print('SetTitle()'); __vars.title = title
+    def SetSize(self,width,height): __vars.width = width;  __vars.height = height    
+    def SetIcon(self,icon): __vars.icon = icon
+    def SetCreatedHandler(self,handler): __vars.createdHandler = handler
+    def SetCloseHandler(self,handler): __vars.closeHandler = handler
+    def Close(self): __vars.stage.close()
+    def SetMenuBar(self,menu): __vars.menu = menu
+    def SetToolBar(self,tool): __vars.tool = tool
+    def SetStatusBar(self,status): __vars.status = status
+    def SetContent(self,content): __vars.content = content
+    def Alert(self, title, message): EzAlertDialog(title,message,__vars.stage)
+    def YesNo(self, title, message, stage=None): return EzYesNoDialog(title,message,__vars.stage)
+    def FileOpenDialog(self, initialFile): return EzFileOpenDialog(initialFile, __vars.stage)
+    def FileSaveDialog(self, initialFile): return EzFileSaveDialog(initialFile, __vars.stage)
   
 #
 # Application
 #
  
-class EzApp(EzWindow):
-    def __init__(self):
-        self.menu = [
-            { 'name' : "File",
-              'item' : [
-                    { 'name' : "Exit" , 'item' : self.onExit, 'icon' : 'exit' },
-                    { 'name' : "-" },
-                    { 'name' : "About", 'item' : self.onAbout, 'icon' : 'help' } ]
-            }, { 'name' : "Help",
-              'item' : [
-                    { 'name' : "About", 'item' : self.onAbout, 'icon' : 'help' } ]
-            }]
-        self.tool = [[
-                { "name" : "Label", "label" : "Address:", "menu" : self.menu },
-                { "name" : "ChoiceBox", "key" : "choice", 'handler' : self.onChoice, 'items' : ["apple","orange"] },
-                { "name" : "ComboBox", "key" : "combo", 'handler' : self.onCombo, 'items' : ["apple","orange"] },
-                { "name" : "TextField", "key" : "texttool", "width" : 100 },
-                { "name" : "ToggleButton", "label" : "Toggle", "handler" : self.onToggle, "tooltip" : "Toggle", 'icon' : 'icon/folder512.png', 'size' : 16  },
-                { "name" : "CheckBox", "label" : "Check", "handler" : self.onCheck, "tooltip" : "Check", 'icon' : 'icon/folder512.png', 'size' : 16  },
-            ],[
-                { "name" : "Button",  "label" : "Exit", "handler" : self.onExit, "tooltip" : "Quit", 'icon' : 'icon/folder512.png', 'size' : 16, 'icon_top' : True  },
-            ]]
-        self.status = [
-                { "name" : "ProgressBar", 'key' : 'progress' },
-                { "name" : "<>"},
-            ]
-        tab1 = [[ { "name" : "TreeView", "key" : "tree", 'handler' : self.onTreeView,"expand" : True },
-                  { "expand" : True }, ]]
-        tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : self.onListBox, 'items' : ["apple","orange"], 'expand' : True },
-                  { "expand" : True }, ]]
-        tab3 = [[ { "name" : "ScrollImageView", 'file' : "./icon/Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
-                  { "expand" : True }, ]]
-        tab4 = [[ { "name" : "Table", 'key':'table', 'columns' : ['First','Mid','Last'], 'rwidths' : [100,50,100], 'aligns':[1,0,-1], 'handler':self.onTableView, 'expand' : True },
-                  { "expand" : True }, ]]
-        split1 = [[
-                { "name" : "TabPane", "labels" : [ "Tree", "List", "Image", "Table" ], "items" : [ tab1, tab2, tab3, tab4 ], "expand" : True },
-                { "expand" : True }, ]]
-        split2 = [[ { "name" : "TextArea", 'key' : 'textarea', "expand" : True },
-                    { "expand" : True }, ]] 
-        self.content = [ # vbox
-            [ # hbox
-                { "name" : "Label", "label" : "Address:", "menu" : self.menu },
-                { "name" : "TextField", "key" : "text", "expand" : True, "menu" : self.menu },
-                { "name" : "Button",  "label" : "Browse", "tooltip" : "Open File", "handler" : self.onBrowse  },
-                { "name" : "Button",  "label" : "Run", "handler" : self.onRun, "menu" : self.menu  },
-            ],  
-            [ # hbox
-                { "name" : "HSplit", "items" : [ split1, split2 ] , "first" : 0.5, "expand" : True},
-                { "expand" : True },
-            ],                
-        ]
-        self.SetCloseHandler(self.onClose)
-        self.SetCreatedHandler(self.created)
-        self.SetTitle("ezJavaFx Demo")
-        self.SetIcon("./icon/Lenna.png")
-        
-    def onAbout(self,event):
-        v = EzYesNoDialog("Global", "Dialog")
-        if v: self.Alert("Result", "Yes")
-        else: self.Alert("Result", "No")
-    def onBrowse(self,event):
-        f = EzFileOpenDialog(None)
-        ctrl = GetControl('text')
-        if ctrl and f: ctrl.SetText(f.getPath())
-    def onExit(self,event):
-        from javafx.application import Platform
-        Platform.exit()
-        #from java.lang import System
-        #System.exit(0)
-        #self.Close()
-    def onClose(self,event):
-        v = EzYesNoDialog("Alert", "Do you want to quit ?", self.stage)
-    def onChoice(self,event):
-        c = GetControl('choice')
-        t = GetControl('texttool')
-        if c and t: t.SetText( c.GetSelectedItem() )
-    def onCombo(self,event):
-        c = GetControl('combo')
-        t = GetControl('texttool')
-        if c and t: t.SetText( c.GetSelectedItem() )
-    def onListBox(self,event):
-        c = GetControl('listbox')
-        t = GetControl('texttool')
-        if c and t: t.SetText( c.GetSelectedItem() )
-    def onTreeView(self,event):
-        c = GetControl('tree')
-        t = GetControl('texttool')
-        print(c.GetSelectedItem())
-        if c and t: t.SetText( c.GetSelectedItemPath("-") )
-    def onTableView(self,event):
-        c = GetControl('table')
-        for item in c.GetSelectedItems():
-            print(item)
-    def onToggle(self,newvalue):
-        print("toggle")
-    def onCheck(self,newvalue):
-        print("toggle")
-    def threadHandler(args):
-        import time
-        p = GetControl('progress')
-        for i in range(100):
-            RunLater(lambda : p.SetValue(1.0*i/100))
-            time.sleep(0.1)
-    def created(self):
-        table = GetControl('table')
-        table.EnableMultiSelection()
-        table.AddRow(["Tom", "and", "Doe"])
-        table.AddRow(["Jane", "and", "Deer"])
-        tree = GetControl('tree')
-        item = tree.AddRootItem("Item1")
-        tree.AddItem("Item1-1",item)
-        tree.AddItem("Item1-2",item)
-        item = tree.AddRootItem("Item2")
-        tree.AddItem("Item2-1",item)
-        tree.AddItem("Item2-2",item)
-        StartThread(self.threadHandler,None)
-        DumpControlTable()      
-    def onRun(self,event):
-        text = GetControl('text')
-        print(text.GetText())
-        if text:
-            rv, out = Execute(text.GetText())
-            textarea = GetControl('textarea')
-            textarea.SetText(str(rv) + '\n' + out)
-            
-if __name__ == '__main__':
-    appWin = EzApp()
+
+def onAbout(event):
+    v = EzYesNoDialog("Global", "Dialog")
+    if v: Alert("Result", "Yes")
+    else: Alert("Result", "No")
+def onBrowse(event):
+    f = EzFileOpenDialog(None)
+    ctrl = GetControl('text')
+    if ctrl and f: ctrl.SetText(f.getPath())
+def onExit(event):
+    from javafx.application import Platform
+    Platform.exit()
+    #from java.lang import System
+    #System.exit(0)
+    #self.Close()
+def onClose(event):
+    global appWin
+    v = EzYesNoDialog("Alert", "Do you want to quit ?", appWin.GetStage())
+    if not v: event.consume()
+def onChoice(event):
+    c = GetControl('choice')
+    t = GetControl('texttool')
+    if c and t: t.SetText( c.GetSelectedItem() )
+def onCombo(event):
+    c = GetControl('combo')
+    t = GetControl('texttool')
+    if c and t: t.SetText( c.GetSelectedItem() )
+def onListBox(event):
+    c = GetControl('listbox')
+    t = GetControl('texttool')
+    if c and t: t.SetText( c.GetSelectedItem() )
+def onTreeView(event):
+    c = GetControl('tree')
+    t = GetControl('texttool')
+    print(c.GetSelectedItem())
+    if c and t: t.SetText( c.GetSelectedItemPath("-") )
+def onTableView(event):
+    c = GetControl('table')
+    for item in c.GetSelectedItems():
+        print(item)
+def onToggle(newvalue):
+    print("toggle")
+def onCheck(newvalue):
+    print("toggle")
+def threadHandler():
+    import time
+    p = GetControl('progress')
+    for i in range(100):
+        RunLater(lambda : p.SetValue(1.0*i/100))
+        time.sleep(0.1)
+def onCreated():
+    table = GetControl('table')
+    table.EnableMultiSelection()
+    table.AddRow(["Tom", "and", "Doe"])
+    table.AddRow(["Jane", "and", "Deer"])
+    tree = GetControl('tree')
+    item = tree.AddRootItem("Item1")
+    tree.AddItem("Item1-1",item)
+    tree.AddItem("Item1-2",item)
+    item = tree.AddRootItem("Item2")
+    tree.AddItem("Item2-1",item)
+    tree.AddItem("Item2-2",item)
+    StartThread(threadHandler,None)
+    #ControlTable()      
+def onRun(event):
+    text = GetControl('text')
+    print(text.GetText())
+    if text:
+        rv, out = Execute(text.GetText())
+        textarea = GetControl('textarea')
+        textarea.SetText(str(rv) + '\n' + out)
+
+app_mainmenu = [
+    { 'name' : "File",
+      'item' : [
+            { 'name' : "Exit" , 'item' : onExit, 'icon' : 'exit' },
+            { 'name' : "-" },
+            { 'name' : "About", 'item' : onAbout, 'icon' : 'help' } ]
+    }, { 'name' : "Help",
+      'item' : [
+            { 'name' : "About", 'item' : onAbout, 'icon' : 'help' } ]
+    }]
+    
+app_tool = [[
+        { "name" : "Label", "label" : "Address:", "menu" : app_mainmenu },
+        { "name" : "ChoiceBox", "key" : "choice", 'handler' : onChoice, 'items' : ["apple","orange"] },
+        { "name" : "ComboBox", "key" : "combo", 'handler' : onCombo, 'items' : ["apple","orange"] },
+        { "name" : "TextField", "key" : "texttool", "width" : 100 },
+        { "name" : "ToggleButton", "label" : "Toggle", "handler" : onToggle, "tooltip" : "Toggle", 'icon' : 'icon/folder512.png', 'size' : 16  },
+        { "name" : "CheckBox", "label" : "Check", "handler" : onCheck, "tooltip" : "Check", 'icon' : 'icon/folder512.png', 'size' : 16  },
+    ],[
+        { "name" : "Button",  "label" : "Exit", "handler" : onExit, "tooltip" : "Quit", 'icon' : 'icon/folder512.png', 'size' : 16, 'icon_top' : True  },
+    ]]
+    
+app_status = [
+        { "name" : "ProgressBar", 'key' : 'progress' },
+        { "name" : "<>"},
+    ]
+    
+tab1 = [[ { "name" : "TreeView", "key" : "tree", 'handler' : onTreeView,"expand" : True },
+          { "expand" : True }, ]]
+tab2 = [[ { "name" : "ListBox", "key" : "listbox", 'handler' : onListBox, 'items' : ["apple","orange"], 'expand' : True },
+          { "expand" : True }, ]]
+tab3 = [[ { "name" : "ScrollImageView", 'file' : "./icon/Lenna.png", 'bindwidth' : True, 'bindheight' : True, 'expand' : True },
+          { "expand" : True }, ]]
+tab4 = [[ { "name" : "Table", 'key':'table', 'columns' : ['First','Mid','Last'], 'rwidths' : [100,50,100], 'aligns':[1,0,-1], 'handler':onTableView, 'expand' : True },
+          { "expand" : True }, ]]
+split1 = [[
+        { "name" : "TabPane", "labels" : [ "Tree", "List", "Image", "Table" ], "items" : [ tab1, tab2, tab3, tab4 ], "expand" : True },
+        { "expand" : True }, ]]
+split2 = [[ { "name" : "TextArea", 'key' : 'textarea', "expand" : True },
+            { "expand" : True }, ]] 
+app_content = [ # vbox
+    [ # hbox
+        { "name" : "Label", "label" : "Address:", "menu" : app_mainmenu },
+        { "name" : "TextField", "key" : "text", "expand" : True, "menu" : app_mainmenu },
+        { "name" : "Button",  "label" : "Browse", "tooltip" : "Open File", "handler" : onBrowse  },
+        { "name" : "Button",  "label" : "Run", "handler" : onRun, "menu" : app_mainmenu  },
+    ],  
+    [ # hbox
+        { "name" : "HSplit", "items" : [ split1, split2 ] , "first" : 0.5, "expand" : True},
+        { "expand" : True },
+    ],                
+]
+
+if __name__ == "__main__":
+    global appWin
+    appWin = EzWindow()
+    appWin.SetTitle("ezPyJFX")
+    appWin.SetSize(640,400)
+    appWin.SetIcon("./icon/Lenna.png")
+    appWin.SetMenuBar(app_mainmenu)
+    appWin.SetToolBar(app_tool)
+    appWin.SetStatusBar(app_status)
+    appWin.SetContent(app_content)
+    appWin.SetCreatedHandler(onCreated)  
+    appWin.SetCloseHandler(onClose)
     appWin.Run()
-    #Application.launch(EzApp().class, [])
+
